@@ -2,256 +2,408 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c11">
 <title>Previsor BTC 5 min</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
 <style>
+/* Layout: uma coluna no celular (ao vivo → apostar → abas); duas colunas no computador */
 :root{
-  --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a; --text:#e8eaf0; --muted:#9097a6;
-  --up:#1fbf75; --down:#ef5350; --neutral:#8a93a6; --accent:#8b7cf6; --warn:#f2b84b;
+  color-scheme: dark;
+  --bg:#0a0c11; --surface:#11141b; --surface-2:#171b24; --surface-3:#1e2330;
+  --line:#252b38; --text:#eef1f6; --muted:#8a92a3; --faint:#5b6374;
+  --up:#2bd67b; --up-soft:rgba(43,214,123,.13); --down:#ff4f61; --down-soft:rgba(255,79,97,.13);
+  --accent:#f5a524; --accent-soft:rgba(245,165,36,.14); --accent-ink:#1b1204;
+  --f-display:"Sora", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Manrope", "Segoe UI", system-ui, sans-serif;
+  --f-num:"Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{max-width:100%;overflow-x:hidden}
-.tbl{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.signal .meta,.preview,.note{overflow-wrap:anywhere}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:1100px;margin:0 auto;padding:16px}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
-h1{font-size:20px;margin:0;font-weight:650}
-.sub{color:var(--muted);font-size:13px}
-.pill{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px;color:var(--muted)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--neutral)}
-.dot.ok{background:var(--up)} .dot.err{background:var(--down)}
-.grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px}
-@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
-.card{min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
-.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px;font-weight:600}
-.signal{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px 8px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);min-height:170px}
-.signal .big{font-size:56px;font-weight:800;letter-spacing:.02em;line-height:1}
-.signal.up .big{color:var(--up)} .signal.down .big{color:var(--down)} .signal.none .big{color:var(--neutral);font-size:40px}
-.signal.up{border-color:rgba(31,191,117,.5)} .signal.down{border-color:rgba(239,83,80,.5)}
-.signal .meta{margin-top:10px;color:var(--muted);font-size:14px}
-.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;margin-top:8px}
-.tag.forte{background:rgba(139,124,246,.18);color:#b9b0ff}
-.tag.fraco{background:rgba(242,184,75,.15);color:var(--warn)}
-.tag.coroa{background:rgba(138,147,166,.15);color:var(--neutral)}
-.signal.faded .big{opacity:.45}
-.bet{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 10px;align-items:center;margin-bottom:10px}
-.bet input,.bet select{width:100%;max-width:160px}
-.nowbox{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}
-.nowhead{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
-.nowhead b{color:var(--text)}
-.bar{height:10px;border-radius:5px;background:var(--down);overflow:hidden;margin-top:8px}
-.bar-up{height:100%;width:50%;background:var(--up);transition:width .4s}
-.barlbl{display:flex;justify-content:space-between;font-size:13px;margin-top:6px;color:var(--muted);font-variant-numeric:tabular-nums}
-.barlbl b{color:var(--text)}
-@media (prefers-reduced-motion:reduce){.bar-up{transition:none}}
-.prices{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.prices .pill b{color:var(--text);font-variant-numeric:tabular-nums}
-@media (max-width:520px){
-  .wrap{padding-inline:12px}
-  h1{font-size:18px}
-  .card{padding:12px}
-  .signal{min-height:140px;padding:14px 6px}
-  .signal .big{font-size:48px}
-  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-  .stat{min-width:0;padding:8px}
-  .stat .v{font-size:16px}
-  .stat .k{font-size:11px}
-  canvas{height:190px}
-  header .controls{width:100%}
-  #src{flex:1}
-}
-.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-.stat{flex:1;min-width:120px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.stat .k{color:var(--muted);font-size:12px}
-.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
-.preview{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px dashed var(--line);color:var(--muted);font-size:14px}
-.preview b{color:var(--text)}
-canvas{width:100%;height:230px;display:block}
-table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
-th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-th{color:var(--muted);font-weight:600;font-size:12px}
-.tbl{max-height:360px;overflow:auto}
-.hit{color:var(--up);font-weight:700} .miss{color:var(--down);font-weight:700} .pend{color:var(--muted)}
-.u{color:var(--up);font-weight:700} .d{color:var(--down);font-weight:700} .n{color:var(--neutral)}
-button,select,input{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;font-size:13px}
-button{cursor:pointer} button:hover{border-color:var(--accent)}
-.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.note{color:var(--muted);font-size:13px}
-.warn{border-left:3px solid var(--warn);padding:8px 12px;background:rgba(242,184,75,.07);border-radius:6px;font-size:13.5px;margin-top:10px}
-.full{grid-column:1/-1}
-label{font-size:13px;color:var(--muted)}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 var(--f-body);-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:0 40px}
+
+/* topo */
+.top{position:sticky;top:0;z-index:5;background:rgba(10,12,17,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.top-in{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:10px}
+.mark{width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:800 18px var(--f-display);flex:none}
+.brand{min-width:0}
+.brand b{display:block;font:700 15px/1.1 var(--f-display);letter-spacing:.01em}
+.brand span{font-size:12px;color:var(--muted)}
+.top-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:6px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.dot.ok{background:var(--up);box-shadow:0 0 0 3px var(--up-soft)}
+.dot.err{background:var(--down)}
+.wallet-chip{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap}
+.wallet-chip b{font-family:var(--f-num);font-weight:600}
+@media (max-width:420px){ .status .txt{display:none} .status{padding:8px} }
+
+.layout{display:grid;gap:14px;margin-top:14px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){ .layout{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start} .col-r{position:sticky;top:76px} }
+.col{display:grid;gap:14px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;min-width:0}
+.eyebrow{font:600 11px/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+
+/* ao vivo */
+.live-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.timer{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);font:600 14px var(--f-num)}
+.timer svg{width:16px;height:16px}
+.price{font:700 clamp(34px,9vw,46px)/1.05 var(--f-display);letter-spacing:-.01em;margin-top:12px;font-variant-numeric:tabular-nums}
+.vs{margin-top:4px;font-size:14px;font-weight:600;color:var(--muted)}
+.vs.up{color:var(--up)} .vs.down{color:var(--down)}
+.progress{height:3px;background:var(--surface-3);border-radius:3px;margin-top:14px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--accent);border-radius:3px}
+.chart-box{position:relative;margin:12px -6px 0}
+#chart{display:block;width:100%;height:clamp(230px,52vw,330px);touch-action:pan-y}
+.ranges{display:flex;gap:4px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
+.ranges button{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:999px;font:600 13px var(--f-body);white-space:nowrap}
+.ranges button[aria-pressed="true"]{background:var(--text);color:var(--bg)}
+.ranges .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.feeds{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--muted)}
+.feeds b{color:var(--text);font-family:var(--f-num);font-weight:500}
+
+/* chances */
+.odds{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.odd{border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r-md);padding:12px 14px;text-align:left;display:grid;gap:2px;transition:border-color .15s, background .15s}
+.odd .lbl{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px}
+.odd .pct{font:700 28px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.odd .sub{font-size:12px;color:var(--muted)}
+.odd.up .lbl,.odd.up .pct{color:var(--up)} .odd.down .lbl,.odd.down .pct{color:var(--down)}
+.odd[aria-pressed="true"].up{border-color:var(--up);background:var(--up-soft)}
+.odd[aria-pressed="true"].down{border-color:var(--down);background:var(--down-soft)}
+.signal-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:var(--r-md);background:var(--surface-2);border:1px dashed var(--line);font-size:13px;color:var(--muted)}
+.signal-strip b{color:var(--text)}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.tag.forte{background:var(--accent-soft);color:var(--accent)}
+.tag.fraco{background:rgba(138,146,163,.14);color:#c4cad6}
+.tag.coroa{background:rgba(91,99,116,.2);color:var(--muted)}
+.u{color:var(--up)} .d{color:var(--down)}
+
+/* bilhete */
+.ticket h2,.tabs-card h2{font:700 17px var(--f-display);margin:0 0 12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--surface-2);padding:4px;border-radius:12px;border:1px solid var(--line)}
+.seg button{border:0;background:transparent;padding:10px;border-radius:9px;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"].up{background:var(--up);color:#062512}
+.seg button[aria-pressed="true"].down{background:var(--down);color:#2b0409}
+.field{margin-top:12px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.inp{display:flex;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:0 12px}
+.inp:focus-within{border-color:var(--accent)}
+.inp span{color:var(--muted);font-family:var(--f-num)}
+.inp input{flex:1;min-width:0;border:0;background:transparent;padding:12px 8px;font:600 17px var(--f-num);outline:none}
+.chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:5px 12px;font:600 13px var(--f-num);color:var(--muted)}
+.chips button:hover{color:var(--text)}
+.hint{font-size:12px;color:var(--faint);margin-top:6px}
+.readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.ro{background:var(--surface-2);border-radius:12px;padding:10px;min-width:0}
+.ro .k{font-size:11px;color:var(--muted)}
+.ro .v{font:600 16px var(--f-num);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.verdict{margin-top:10px;padding:10px 12px;border-radius:12px;font-size:13.5px;border:1px solid var(--line)}
+.verdict.good{background:var(--up-soft);border-color:rgba(43,214,123,.35)}
+.verdict.bad{background:var(--down-soft);border-color:rgba(255,79,97,.3)}
+.verdict.meh{background:var(--surface-2)}
+.cta{width:100%;margin-top:12px;border:0;border-radius:14px;padding:15px;font:700 16px var(--f-display);background:var(--accent);color:var(--accent-ink)}
+.cta:disabled{opacity:.45;cursor:not-allowed}
+.cta.up{background:var(--up);color:#062512} .cta.down{background:var(--down);color:#2b0409}
+.msg{font-size:13px;margin-top:8px;min-height:1.2em;color:var(--muted)}
+.open-bets{margin-top:12px;display:grid;gap:6px}
+.ob{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:9px 12px;border-radius:12px;background:var(--surface-2);font-size:13px}
+.ob .r{font-family:var(--f-num);font-weight:600}
+
+/* abas */
+.tabs{display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:4px;overflow-x:auto;scrollbar-width:none}
+.tabs button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:9px;font-weight:700;font-size:13px;color:var(--muted);white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--surface-3);color:var(--text)}
+.panel{margin-top:14px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{background:var(--surface-2);border-radius:12px;padding:12px;min-width:0}
+.stat .k{font-size:12px;color:var(--muted)}
+.stat .v{font:700 20px var(--f-num);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .s{font-size:12px;color:var(--faint)}
+#spark{display:block;width:100%;height:110px;margin-top:12px}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:end}
+.row-actions .field{margin:0;flex:1;min-width:140px}
+.btn{border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:11px 14px;font-weight:700;font-size:13px}
+.btn:hover{border-color:var(--muted)}
+.tbl{overflow-x:auto;margin-top:6px;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+td.num{font-family:var(--f-num)}
+.pos{color:var(--up);font-weight:600} .neg{color:var(--down);font-weight:600} .pend{color:var(--muted)}
+.empty{color:var(--muted);font-size:13px;padding:14px 0}
+.prose{font-size:14px;color:#c8cdd8;max-width:65ch}
+.prose p{margin:0 0 10px}
+.prose b{color:var(--text)}
+select.sel{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+@media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 </style>
 </head>
 <body>
+<header class="top">
+  <div class="top-in">
+    <div class="mark" aria-hidden="true">₿</div>
+    <div class="brand"><b>Previsor</b><span>BTC · 5 min</span></div>
+    <div class="top-right">
+      <span class="status" id="status" title="Conexão com o preço"><span class="dot" id="dot"></span><span class="txt" id="statusTxt">conectando</span></span>
+      <button class="wallet-chip" id="walletChip" title="Ver carteira simulada">Saldo <b id="walletTop">$100.00</b></button>
+    </div>
+  </div>
+</header>
+
 <div class="wrap">
-  <header>
-    <div>
-      <h1>Previsor BTC · janelas de 5 min</h1>
-      <div class="sub">Diz UP / DOWN no começo de cada janela (:00, :05, :10…). Não aposta nada, só mostra o sinal e anota se acertou.</div>
-    </div>
-    <div class="controls">
-      <span class="pill"><span class="dot" id="dot"></span><span id="status">conectando…</span></span>
-      <span class="pill">BTC <b id="price" style="color:var(--text)">—</b></span>
-      <select id="src" title="Fonte dos dados de preço">
-        <option value="auto">Fonte: automática</option>
-        <option value="binance">Binance (só leitura)</option>
-        <option value="coinbase">Coinbase (só leitura)</option>
-        <option value="kraken">Kraken (só leitura)</option>
-      </select>
-    </div>
-  </header>
+  <div class="layout">
+    <div class="col">
+      <section class="card" aria-label="Preço ao vivo">
+        <div class="live-head">
+          <span class="eyebrow" id="winLabel">Janela —</span>
+          <span class="timer num" aria-live="off">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--surface-3)" stroke-width="2"/><circle id="ring" cx="8" cy="8" r="6.5" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="40.84" stroke-dashoffset="0" transform="rotate(-90 8 8)" stroke-linecap="round"/></svg>
+            <span id="countdown">--:--</span>
+          </span>
+        </div>
+        <div class="price" id="price">$—</div>
+        <div class="vs" id="vs">aguardando o preço a bater</div>
+        <div class="progress"><i id="prog"></i></div>
+        <div class="chart-box"><canvas id="chart" aria-label="Gráfico do preço do BTC"></canvas></div>
+        <div class="ranges" role="group" aria-label="Período do gráfico">
+          <button data-range="live" aria-pressed="true"><span class="live-dot"></span>LIVE</button>
+          <button data-range="15m" aria-pressed="false">15M</button>
+          <button data-range="1h" aria-pressed="false">1H</button>
+          <button data-range="1d" aria-pressed="false">1D</button>
+        </div>
+        <div class="feeds" id="feeds"></div>
+      </section>
 
-  <div class="grid">
-    <div class="card">
-      <h2>Janela atual <span id="winlabel" style="text-transform:none;letter-spacing:0"></span></h2>
-      <div class="signal none" id="sig">
-        <div class="big" id="sigbig">aguarde…</div>
-        <div id="sigtag"></div>
-        <div class="meta" id="sigmeta">Carregando dados de preço</div>
-      </div>
-      <div class="nowbox" id="nowbox">
-        <div class="nowhead"><span>Chance agora (atualiza a cada segundo)</span><b id="nowtxt">—</b></div>
-        <div class="bar"><div class="bar-up" id="barup"></div></div>
-        <div class="barlbl"><span>▲ UP <b id="nowup">—</b></span><span><b id="nowdn">—</b> DOWN ▼</span></div>
-      </div>
-      <div class="preview" id="preview">Prévia da próxima janela aparece no último minuto.</div>
-      <div class="prices" id="prices"></div>
-      <div class="row">
-        <div class="stat"><div class="k">Fecha em</div><div class="v" id="countdown">—</div></div>
-        <div class="stat"><div class="k">Preço de início</div><div class="v" id="startpx">—</div></div>
-        <div class="stat"><div class="k">Agora vs início</div><div class="v" id="delta">—</div></div>
-      </div>
+      <section class="card" aria-label="Chance agora">
+        <div class="eyebrow" style="margin-bottom:10px">Chance agora · segundo o modelo</div>
+        <div class="odds">
+          <button class="odd up" data-side="UP" aria-pressed="true"><span class="lbl">▲ Acima</span><span class="pct" id="pUp">—</span><span class="sub" id="xUp">justo: —</span></button>
+          <button class="odd down" data-side="DOWN" aria-pressed="false"><span class="lbl">▼ Abaixo</span><span class="pct" id="pDn">—</span><span class="sub" id="xDn">justo: —</span></button>
+        </div>
+        <div class="signal-strip" id="sigStrip">Carregando o sinal de abertura…</div>
+        <div class="signal-strip" id="preview" hidden></div>
+      </section>
     </div>
 
-    <div class="card">
-      <h2>Últimos 60 minutos</h2>
-      <canvas id="chart"></canvas>
-      <div class="note" style="margin-top:6px">Linhas verticais = início de cada janela de 5 min. Linha tracejada = preço de início da janela atual.</div>
-    </div>
+    <div class="col col-r">
+      <section class="card ticket" aria-label="Apostar na simulação">
+        <h2>Apostar na simulação</h2>
+        <div class="seg" role="group" aria-label="Lado">
+          <button class="up" data-tside="UP" aria-pressed="true">▲ Acima</button>
+          <button class="down" data-tside="DOWN" aria-pressed="false">▼ Abaixo</button>
+        </div>
+        <div class="field">
+          <label for="amount">Valor da aposta</label>
+          <div class="inp"><span>$</span><input id="amount" inputmode="decimal" value="5"></div>
+          <div class="chips"><button data-amt="1">$1</button><button data-amt="5">$5</button><button data-amt="10">$10</button><button data-amt="25">$25</button><button data-amt="max">Máx</button></div>
+        </div>
+        <div class="field">
+          <label for="mult">Multiplicador que a Phantom mostra</label>
+          <div class="inp"><input id="mult" inputmode="decimal" placeholder="ex: 1.7 ou 60%"><span>x</span></div>
+          <div class="hint" id="multHint">Digite o "1.7x" do app, ou a porcentagem (60%). Em branco, usa uma estimativa.</div>
+        </div>
+        <div class="readout">
+          <div class="ro"><div class="k">Recebe se acertar</div><div class="v" id="roPay">—</div></div>
+          <div class="ro"><div class="k">Precisa acertar</div><div class="v" id="roNeed">—</div></div>
+          <div class="ro"><div class="k">Chance modelo</div><div class="v" id="roChance">—</div></div>
+        </div>
+        <div class="verdict meh" id="verdict">A análise aparece quando a janela estiver rodando.</div>
+        <button class="cta up" id="betBtn">Apostar</button>
+        <div class="msg" id="betMsg" role="status"></div>
+        <div class="open-bets" id="openBets"></div>
+      </section>
 
-    <div class="card">
-      <h2>Simulação (seu placar ao vivo)</h2>
-      <div class="row" style="margin-top:0">
-        <div class="stat"><div class="k">Sinais FORTES</div><div class="v" id="accForte">—</div></div>
-        <div class="stat"><div class="k">Sinais fracos</div><div class="v" id="accFraco">—</div></div>
-        <div class="stat"><div class="k">Cara ou coroa</div><div class="v" id="accCoroa">—</div></div>
-      </div>
-      <div class="note" style="margin-top:8px">Só conta janelas em que esta página estava aberta no início. Fica salvo neste navegador.</div>
-      <div class="controls" style="margin-top:10px">
-        <button id="wake">Manter tela ligada</button>
-        <button id="csv">Exportar CSV</button>
-        <button id="clear">Zerar placar</button>
-      </div>
-    </div>
+      <section class="card tabs-card">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="carteira" aria-selected="true">Carteira</button>
+          <button role="tab" data-tab="apostas" aria-selected="false">Apostas</button>
+          <button role="tab" data-tab="modelo" aria-selected="false">Modelo</button>
+          <button role="tab" data-tab="sobre" aria-selected="false">Sobre</button>
+        </div>
 
-    <div class="card">
-      <h2>Comparar com a Phantom</h2>
-      <div class="note" style="margin-bottom:8px">Copie do app os valores do lado que você quer apostar.</div>
-      <div class="bet">
-        <label for="side">Lado</label>
-        <select id="side"><option value="UP">▲ UP</option><option value="DOWN">▼ DOWN</option></select>
-        <label for="stake">Você aposta (US$)</label>
-        <input id="stake" type="number" inputmode="decimal" min="1" step="0.01" value="1.00">
-        <label for="payout">Recebe se acertar (US$)</label>
-        <input id="payout" type="number" inputmode="decimal" min="1" step="0.01" value="2.00">
-      </div>
-      <div class="warn" id="be"></div>
-      <div class="note" style="margin-top:10px" id="bt"></div>
-    </div>
+        <div class="panel" data-panel="carteira">
+          <div class="stats">
+            <div class="stat"><div class="k">Saldo</div><div class="v" id="wBal">—</div><div class="s" id="wOpen"></div></div>
+            <div class="stat"><div class="k">Lucro / prejuízo</div><div class="v" id="wPL">—</div><div class="s" id="wPLpct"></div></div>
+            <div class="stat"><div class="k">Acertos</div><div class="v" id="wWin">—</div><div class="s" id="wWinN"></div></div>
+            <div class="stat"><div class="k">Apostas</div><div class="v" id="wCount">—</div><div class="s" id="wAvg"></div></div>
+          </div>
+          <canvas id="spark" aria-label="Evolução do saldo"></canvas>
+          <div class="row-actions">
+            <div class="field"><label for="initBal">Saldo inicial</label><div class="inp"><span>$</span><input id="initBal" inputmode="decimal" value="100"></div></div>
+            <button class="btn" id="resetBtn">Recomeçar</button>
+          </div>
+        </div>
 
-    <div class="card full">
-      <h2>Histórico de previsões</h2>
-      <div class="tbl">
-        <table>
-          <thead><tr><th>Janela</th><th>Sinal</th><th>Confiança</th><th>Força</th><th>Preço início</th><th>Preço fim</th><th>Resultado</th></tr></thead>
-          <tbody id="log"></tbody>
-        </table>
-      </div>
-    </div>
+        <div class="panel" data-panel="apostas" hidden>
+          <div class="tbl"><table>
+            <thead><tr><th>Janela</th><th>Lado</th><th>Valor</th><th>Mult.</th><th>Chance</th><th>Resultado</th></tr></thead>
+            <tbody id="betRows"></tbody>
+          </table></div>
+        </div>
 
-    <div class="card full note">
-      <b style="color:var(--text)">Como usar:</b> deixe esta página aberta. No começo de cada janela (:00, :05, :10…) o sinal é calculado com os candles de 1 minuto que já fecharam.
-      O sinal grande é o de abertura: <b>FORTE</b> é o único que teve vantagem mais clara no teste; <b>fraco</b> é arriscado; <b>cara ou coroa</b> é melhor pular.
-      A <b>chance agora</b> muda durante a janela conforme o preço anda. Ela passa fácil de 70%, mas a Phantom também sobe o preço do lado que está ganhando. Só vale entrar quando a chance for maior que o necessário: coloque quanto aposta e quanto recebe no quadro "Comparar com a Phantom".
-      O preço aqui vem de uma corretora (só leitura, sem conta), e a Phantom resolve pelo preço da Chainlink, então em janelas onde o preço quase não se mexe o resultado pode divergir.
-      Rode pelo menos 1–2 semanas só olhando o placar antes de colocar dinheiro. Isto não é recomendação financeira.
+        <div class="panel" data-panel="modelo" hidden>
+          <p class="prose" style="margin-top:0">Placar automático do sinal de abertura, anotado em toda janela em que a página estava aberta no início.</p>
+          <div class="stats" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+            <div class="stat"><div class="k">FORTE</div><div class="v" id="mForte">—</div><div class="s" id="mForteN"></div></div>
+            <div class="stat"><div class="k">Fraco</div><div class="v" id="mFraco">—</div><div class="s" id="mFracoN"></div></div>
+            <div class="stat"><div class="k">Cara/coroa</div><div class="v" id="mCoroa">—</div><div class="s" id="mCoroaN"></div></div>
+          </div>
+          <div class="tbl"><table>
+            <thead><tr><th>Janela</th><th>Sinal</th><th>Conf.</th><th>Força</th><th>Resultado</th></tr></thead>
+            <tbody id="logRows"></tbody>
+          </table></div>
+          <div class="row-actions"><button class="btn" id="csvBtn">Exportar CSV</button><button class="btn" id="clearLog">Zerar placar do modelo</button></div>
+        </div>
+
+        <div class="panel prose" data-panel="sobre" hidden>
+          <p><b>Como usar.</b> No começo de cada janela (:00, :05, :10…) sai o <b>sinal de abertura</b>. Durante a janela, a <b>chance agora</b> muda com o preço. Na Phantom, veja o multiplicador do lado que você quer, digite aqui e a página diz se vale a pena: só vale quando a chance do modelo é maior que 1 ÷ multiplicador.</p>
+          <p><b>Teste com dados reais</b> (<span id="btPeriod"></span>): sinal de abertura FORTE acertou <b id="btForte"></b>, fraco <b id="btFraco"></b>, todas <b id="btAll"></b>. Seguindo quem está ganhando: 1 min depois do início 66%, 2 min 74%, 3 min 80%, 4 min 88%. A Phantom também sobe o preço de quem está ganhando.</p>
+          <p><b>Preço.</b> O gráfico usa cada negócio da Coinbase (BTC/USD) e da Binance (BTC/USDT), combinando as duas. A Phantom decide pelo preço da Chainlink, então em janelas muito apertadas o resultado daqui pode sair diferente do app.</p>
+          <div class="field"><label for="src">Fonte dos candles do modelo</label>
+            <select class="sel" id="src"><option value="auto">Automática</option><option value="binance">Binance</option><option value="coinbase">Coinbase</option><option value="kraken">Kraken</option></select></div>
+          <div class="row-actions"><button class="btn" id="wake">Manter tela ligada</button></div>
+          <p style="margin-top:14px">Simulação com dinheiro fictício. Passado não garante futuro e isto não é recomendação financeira.</p>
+        </div>
+      </section>
     </div>
   </div>
 </div>
 
 <script>
 const MODEL = {"features": ["ret1", "ret3", "ret5", "ret15", "ret30", "ret60", "ret240", "vol15", "vol60", "volratio", "rsi", "dist_ema20", "dist_ema100", "vz", "pos60"], "mu": [1.2857e-06, 2.1064e-06, -1.1817e-06, -3.295e-06, -6.7006e-06, -1.35273e-05, -5.55332e-05, 0.0004913382, 0.0005118294, 0.9616721294, 50.0845540278, -1.7547e-06, -1.48252e-05, -0.279680313, 0.5059436861], "sd": [0.000575569, 0.001040291, 0.0013845411, 0.0023851796, 0.0033580009, 0.0047123616, 0.0093546678, 0.0003770624, 0.0003484473, 0.2827329681, 12.5038773908, 0.0012898071, 0.0030005783, 0.8036348156, 0.3099550993], "coef": [0.0004137, -0.02190815, 0.04975664, 0.02707659, 0.01556511, 0.01299143, 0.00306932, 0.00301814, -0.006769, -0.0026882, -0.01845959, -0.08489684, -0.04342224, -0.00202028, -0.00945107], "intercept": -0.003987778906587021, "stats": {"todas": {"acc": 51.2, "pct": 100.0, "per_day": 285.6}, "fraco": {"acc": 53.4, "pct": 13.3, "per_day": 37.9}, "forte": {"acc": 55.5, "pct": 3.2, "per_day": 9.0}}, "period": ["2025-04-01", "2026-09-29"], "n_test": 155916};
-const WIN = 300; // 5 min em segundos
-const STRONG = 0.54, WEAK = 0.52;
-const LS_KEY = 'previsor_btc5_log_v1';
-const TIER_LABEL = {forte:'FORTE · entra', fraco:'fraco · arriscado', coroa:'cara ou coroa · melhor pular'};
+const WIN = 300, STRONG = 0.54, WEAK = 0.52;
+const TIER_LABEL = {forte:'FORTE', fraco:'fraco', coroa:'cara ou coroa'};
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const money = v => (v<0?'-':'') + '$' + Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pxFmt = v => v==null ? '$—' : '$' + v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const hm = t => new Date(t*1000).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const dhm = t => new Date(t*1000).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 
-// ---------- armazenamento ----------
-function loadLog(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)||'[]'); }catch(e){ return []; } }
-function saveLog(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(logRows.slice(-2000))); }catch(e){} }
-let logRows = loadLog();
+/* ============ relógio (acompanha o horário das corretoras) ============ */
+let clockOff = 0;
+const now = () => Date.now()/1000 + clockOff;
+function syncClock(serverT){ const d = serverT - Date.now()/1000; if(Math.abs(d) < 120) clockOff += (d - clockOff) * 0.05; }
 
-// ---------- dados ----------
-// candles: {t (abertura, seg), o,h,l,c,v}
-let candles = new Map();
-let source = 'auto', activeSource = null, lastOk = 0;
-
+/* ============ rede ============ */
 async function getJSON(url){
-  // sem AbortSignal: alguns visualizadores repassam o fetch e não conseguem copiar o sinal
-  let id;
-  const timeout = new Promise((_,rej)=>{ id = setTimeout(()=>rej(new Error('tempo esgotado')), 8000); });
-  try{
-    const r = await Promise.race([fetch(url), timeout]);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    return await r.json();
-  } finally { clearTimeout(id); }
+  let id; const timeout = new Promise((_,rej)=>{ id = setTimeout(()=>rej(new Error('tempo esgotado')), 8000); });
+  try{ const r = await Promise.race([fetch(url), timeout]); if(!r.ok) throw new Error('HTTP '+r.status); return await r.json(); }
+  finally{ clearTimeout(id); }
 }
 
-// ---------- tempo real (WebSocket) ----------
-let wsBin=null, wsCb=null, wsBinOk=false, lastWsMsg=0;
-const live = {binance:null, coinbase:null};
-function openBinanceWS(){
-  if(wsBin) return;
-  const urls = ['wss://stream.binance.com:9443/ws/btcusdt@kline_1m','wss://data-stream.binance.vision/ws/btcusdt@kline_1m'];
-  let idx = 0;
-  const connect = ()=>{
-    let ws; try{ ws = new WebSocket(urls[idx % urls.length]); }catch(e){ wsBin=null; return; }
-    wsBin = ws;
-    ws.onmessage = ev=>{
-      try{
-        const k = JSON.parse(ev.data).k; if(!k) return;
-        const row = {t:k.t/1000,o:+k.o,h:+k.h,l:+k.l,c:+k.c,v:+k.v};
-        live.binance = row.c; lastWsMsg = Date.now(); wsBinOk = true;
-        if(activeSource==='binance'){ candles.set(row.t,row); lastOk = Date.now(); setStatus(true,'tempo real · binance'); if(k.x) onCandleClosed(); }
-      }catch(e){}
-    };
-    ws.onclose = ()=>{ wsBinOk=false; wsBin=null; idx++; setTimeout(()=>{ if(!wsBin) connect(); }, 3000); };
-    ws.onerror = ()=>{ try{ ws.close(); }catch(e){} };
-  };
-  connect();
+/* ============ preço ao vivo por negócio (Coinbase + Binance) ============ */
+// cada fonte guarda o último negócio e o preço em cada virada de 5 min (fronteira)
+const feeds = { coinbase:{name:'Coinbase', last:null, ws:null, lastMsg:0}, binance:{name:'Binance', last:null, ws:null, lastMsg:0} };
+const boundary = {}; // boundary[t][fonte] = preço no instante t (múltiplo de 300)
+function setBoundary(t, f, p){ (boundary[t] ||= {})[f] ??= p; }
+function onTick(f, p, t){
+  const fd = feeds[f]; if(!(p>0)) return;
+  if(t) syncClock(t); else t = now();
+  if(fd.last){
+    const wPrev = Math.floor(fd.last.t/WIN)*WIN, wNow = Math.floor(t/WIN)*WIN;
+    if(wNow > wPrev){ setBoundary(wNow, f, (t - fd.last.t) < 15 ? fd.last.p : p); }
+  }
+  fd.last = {p, t}; fd.lastMsg = Date.now();
 }
-function openCoinbaseWS(){
-  if(wsCb) return;
+function openCoinbase(){
+  if(feeds.coinbase.ws) return;
   let ws; try{ ws = new WebSocket('wss://ws-feed.exchange.coinbase.com'); }catch(e){ return; }
-  wsCb = ws;
-  ws.onopen = ()=>ws.send(JSON.stringify({type:'subscribe',product_ids:['BTC-USD'],channels:['ticker']}));
-  ws.onmessage = ev=>{ try{ const m=JSON.parse(ev.data); if(m.type==='ticker' && m.price){ live.coinbase=+m.price; } }catch(e){} };
-  ws.onclose = ()=>{ wsCb=null; setTimeout(openCoinbaseWS, 5000); };
+  feeds.coinbase.ws = ws;
+  ws.onopen = ()=>ws.send(JSON.stringify({type:'subscribe', product_ids:['BTC-USD'], channels:['ticker']}));
+  ws.onmessage = ev=>{ try{ const m = JSON.parse(ev.data); if(m.type==='ticker' && m.price) onTick('coinbase', +m.price, m.time ? Date.parse(m.time)/1000 : null); }catch(e){} };
+  ws.onclose = ()=>{ feeds.coinbase.ws = null; setTimeout(openCoinbase, 3000); };
   ws.onerror = ()=>{ try{ ws.close(); }catch(e){} };
 }
-function onCandleClosed(){ render(); }
+let binIdx = 0;
+function openBinance(){
+  if(feeds.binance.ws) return;
+  const hosts = ['wss://stream.binance.com:9443','wss://data-stream.binance.vision'];
+  let ws; try{ ws = new WebSocket(hosts[binIdx % hosts.length] + '/stream?streams=btcusdt@aggTrade/btcusdt@kline_1m'); }catch(e){ return; }
+  feeds.binance.ws = ws;
+  ws.onmessage = ev=>{
+    try{
+      const {stream, data} = JSON.parse(ev.data);
+      if(stream.endsWith('aggTrade')) onTick('binance', +data.p, data.T/1000);
+      else if(data.k && activeSource==='binance'){
+        const k = data.k; candles.set(k.t/1000, {t:k.t/1000,o:+k.o,h:+k.h,l:+k.l,c:+k.c,v:+k.v});
+        candleWs = Date.now(); lastCandleOk = Date.now();
+      }
+    }catch(e){}
+  };
+  ws.onclose = ()=>{ feeds.binance.ws = null; binIdx++; setTimeout(openBinance, 3000); };
+  ws.onerror = ()=>{ try{ ws.close(); }catch(e){} };
+}
+// se o WebSocket não entregar nada, consulta o preço a cada segundo
+async function pollTicker(f){
+  try{
+    if(f==='coinbase'){ const d = await getJSON('https://api.exchange.coinbase.com/products/BTC-USD/ticker'); onTick('coinbase', +d.price, d.time ? Date.parse(d.time)/1000 : null); }
+    else { let d; try{ d = await getJSON('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'); }catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT'); } onTick('binance', +d.price, null); }
+  }catch(e){}
+}
+// preço exato numa virada (quando a página não estava aberta): abertura do candle de 1 min
+const bfPending = {};
+async function fetchBoundary(f, t){
+  const key = f+t; if(bfPending[key] && Date.now()-bfPending[key] < 15000) return; bfPending[key] = Date.now();
+  try{
+    if(f==='coinbase'){
+      const d = await getJSON(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=60&start=${new Date(t*1000).toISOString()}&end=${new Date((t+60)*1000).toISOString()}`);
+      const k = d.find(x=>x[0]===t); if(k) setBoundary(t, f, +k[3]);
+    } else {
+      const q = `?symbol=BTCUSDT&interval=1m&startTime=${t*1000}&limit=1`;
+      let d; try{ d = await getJSON('https://api.binance.com/api/v3/klines'+q); }catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/klines'+q); }
+      if(d[0] && d[0][0]===t*1000) setBoundary(t, f, +d[0][1]);
+    }
+  }catch(e){}
+}
+const liveFeeds = () => Object.keys(feeds).filter(f => feeds[f].last && Date.now()-feeds[f].lastMsg < 15000);
+
+// preço a bater = média das fontes que têm o preço de início; variação = média das variações de cada fonte
+function windowState(S){
+  const b = boundary[S] || {};
+  const withStart = Object.keys(b);
+  if(!withStart.length) return null;
+  const beat = withStart.reduce((a,f)=>a+b[f],0)/withStart.length;
+  const lf = liveFeeds().filter(f => b[f]!=null);
+  if(!lf.length) return {beat, cur:null};
+  const delta = lf.reduce((a,f)=>a + (feeds[f].last.p - b[f]),0)/lf.length;
+  return {beat, cur: beat + delta};
+}
+// resultado de uma janela: precisa do preço na virada de início e de fim na mesma fonte
+function windowResult(S){
+  const a = boundary[S] || {}, z = boundary[S+WIN] || {};
+  const both = Object.keys(a).filter(f => z[f]!=null);
+  if(!both.length) return null;
+  const beat = both.reduce((s,f)=>s+a[f],0)/both.length;
+  const delta = both.reduce((s,f)=>s+(z[f]-a[f]),0)/both.length;
+  return {beat, end: beat+delta, delta};
+}
+
+/* ============ candles de 1 min (modelo + gráficos 1H / 1D) ============ */
+let candles = new Map(), source = 'auto', activeSource = null, lastCandleOk = 0, candleWs = 0;
 const fetchers = {
   async binance(limit){
     const q = `?symbol=BTCUSDT&interval=1m&limit=${limit}`;
-    let d;
-    try{ d = await getJSON('https://api.binance.com/api/v3/klines'+q); }
-    catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/klines'+q); }
+    let d; try{ d = await getJSON('https://api.binance.com/api/v3/klines'+q); }catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/klines'+q); }
     return d.map(k=>({t:k[0]/1000,o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
   },
   async coinbase(limit){
-    const out = []; let end = Math.floor(Date.now()/1000/60)*60 + 60;
-    let need = Math.min(limit, 1200);
+    const out = []; let end = Math.floor(now()/60)*60 + 60, need = Math.min(limit, 1500);
     while(need > 0){
       const n = Math.min(300, need), start = end - n*60;
       const d = await getJSON(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=60&start=${new Date(start*1000).toISOString()}&end=${new Date(end*1000).toISOString()}`);
@@ -260,277 +412,436 @@ const fetchers = {
     }
     return out.sort((a,b)=>a.t-b.t);
   },
-  async kraken(limit){
+  async kraken(){
     const d = await getJSON('https://api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1');
     const key = Object.keys(d.result).find(k=>k!=='last');
     return d.result[key].map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[6]}));
   }
 };
-
-async function pull(limit){
-  const order = source==='auto' ? (activeSource ? [activeSource,'binance','coinbase','kraken'] : ['binance','coinbase','kraken']) : [source];
-  let lastErr;
-  for(const s of [...new Set(order)]){
+async function pullCandles(limit){
+  const order = source==='auto' ? [...new Set([activeSource,'binance','coinbase','kraken'].filter(Boolean))] : [source];
+  for(const s of order){
     try{
-      const rows = await fetchers[s](limit);
+      const rows = await fetchers[s](s!==activeSource ? 1500 : limit);
       if(!rows.length) throw new Error('vazio');
       if(s!==activeSource){ candles = new Map(); activeSource = s; }
       rows.forEach(r=>candles.set(r.t, r));
-      // mantém ~1500 candles
-      const keys=[...candles.keys()].sort((a,b)=>a-b); keys.slice(0,Math.max(0,keys.length-1500)).forEach(k=>candles.delete(k));
-      lastOk = Date.now(); setStatus(true, (s==='binance' && wsBinOk) ? 'tempo real · binance' : `ao vivo · ${s}`);
-      return true;
-    }catch(e){ lastErr = e; }
+      const keys = [...candles.keys()].sort((a,b)=>a-b); keys.slice(0, Math.max(0, keys.length-1500)).forEach(k=>candles.delete(k));
+      lastCandleOk = Date.now(); return true;
+    }catch(e){}
   }
-  setStatus(false, 'sem conexão com a fonte de preço'); console.log(lastErr);
   return false;
 }
-function setStatus(ok, txt){ document.getElementById('dot').className='dot '+(ok?'ok':'err'); document.getElementById('status').textContent=txt; }
-function sorted(){ return [...candles.values()].sort((a,b)=>a.t-b.t); }
+const sortedCandles = () => [...candles.values()].sort((a,b)=>a.t-b.t);
 
-// ---------- modelo (mesmos indicadores do teste em Python) ----------
-function features(arr){ // arr: candles até (incluindo) o último fechado antes do início da janela
+/* ============ modelo (mesmos indicadores do teste em Python) ============ */
+function features(arr){
   const n = arr.length; if(n < 300) return null;
   const c = arr.map(x=>x.c), h = arr.map(x=>x.h), l = arr.map(x=>x.l), v = arr.map(x=>x.v), i = n-1;
   const ret = k => Math.log(c[i]/c[i-k]);
-  const r = []; for(let j=1;j<n;j++) r[j]=Math.log(c[j]/c[j-1]);
-  const std = (from,to)=>{ const s=r.slice(from,to+1); const m=s.reduce((a,b)=>a+b,0)/s.length; return Math.sqrt(s.reduce((a,b)=>a+(b-m)**2,0)/(s.length-1)); };
+  const r = []; for(let j=1;j<n;j++) r[j] = Math.log(c[j]/c[j-1]);
+  const std = (a,b)=>{ const s = r.slice(a,b+1), m = s.reduce((x,y)=>x+y,0)/s.length; return Math.sqrt(s.reduce((x,y)=>x+(y-m)**2,0)/(s.length-1)); };
   const vol15 = std(i-14,i), vol60 = std(i-59,i);
-  let up=Math.max(c[1]-c[0],0), dn=Math.max(c[0]-c[1],0); const a=1/14;
-  for(let j=2;j<n;j++){ const d=c[j]-c[j-1]; up=a*Math.max(d,0)+(1-a)*up; dn=a*Math.max(-d,0)+(1-a)*dn; }
+  let up = Math.max(c[1]-c[0],0), dn = Math.max(c[0]-c[1],0); const a = 1/14;
+  for(let j=2;j<n;j++){ const d = c[j]-c[j-1]; up = a*Math.max(d,0)+(1-a)*up; dn = a*Math.max(-d,0)+(1-a)*dn; }
   const rsi = dn===0 ? 100 : 100-100/(1+up/dn);
-  const ema = span=>{ const al=2/(span+1); let e=c[0]; for(let j=1;j<n;j++) e=al*c[j]+(1-al)*e; return e; };
-  const sum = (arr2,from,to)=>{ let s=0; for(let j=from;j<=to;j++) s+=arr2[j]; return s; };
+  const ema = span=>{ const al = 2/(span+1); let e = c[0]; for(let j=1;j<n;j++) e = al*c[j]+(1-al)*e; return e; };
+  const sum = (x,a,b)=>{ let s=0; for(let j=a;j<=b;j++) s+=x[j]; return s; };
   const vz = Math.log1p(sum(v,i-14,i)) - Math.log1p(sum(v,i-239,i)/16);
   let hh=-Infinity, ll=Infinity; for(let j=i-59;j<=i;j++){ hh=Math.max(hh,h[j]); ll=Math.min(ll,l[j]); }
-  const pos60 = hh>ll ? (c[i]-ll)/(hh-ll) : 0.5;
   const f = {ret1:ret(1),ret3:ret(3),ret5:ret(5),ret15:ret(15),ret30:ret(30),ret60:ret(60),ret240:ret(240),
-    vol15, vol60, volratio: vol60>0?vol15/vol60:1, rsi, dist_ema20:Math.log(c[i]/ema(20)), dist_ema100:Math.log(c[i]/ema(100)), vz, pos60};
+    vol15, vol60, volratio: vol60>0 ? vol15/vol60 : 1, rsi,
+    dist_ema20: Math.log(c[i]/ema(20)), dist_ema100: Math.log(c[i]/ema(100)), vz, pos60: hh>ll ? (c[i]-ll)/(hh-ll) : 0.5};
   return MODEL.features.map(k=>f[k]);
 }
-function predict(x){
-  let z = MODEL.intercept;
-  x.forEach((xi,k)=>{ z += MODEL.coef[k]*((xi-MODEL.mu[k])/MODEL.sd[k]); });
-  return 1/(1+Math.exp(-z));
-}
-function classify(p){
-  const conf = Math.max(p,1-p);
-  const dir = p>=0.5 ? 'UP' : 'DOWN';
-  const tier = conf>=STRONG ? 'forte' : conf>=WEAK ? 'fraco' : 'coroa';
-  return {p, conf, dir, tier};
-}
-
-// ---------- lógica das janelas ----------
-const fmtT = t => new Date(t*1000).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-const fmtD = t => new Date(t*1000).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-const fmtP = p => p==null ? '—' : '$'+p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-
+function predict(x){ let z = MODEL.intercept; x.forEach((xi,k)=>{ z += MODEL.coef[k]*((xi-MODEL.mu[k])/MODEL.sd[k]); }); return 1/(1+Math.exp(-z)); }
+function classify(p){ const conf = Math.max(p,1-p); return {p, conf, dir: p>=0.5?'UP':'DOWN', tier: conf>=STRONG?'forte':conf>=WEAK?'fraco':'coroa'}; }
 function signalForWindow(S){
-  const arr = sorted().filter(x=>x.t < S);
-  if(!arr.length || arr[arr.length-1].t !== S-60) return null; // último candle antes da janela ainda não chegou
+  const arr = sortedCandles().filter(x=>x.t < S);
+  if(!arr.length || arr[arr.length-1].t !== S-60) return null;
   const x = features(arr); if(!x || x.some(v=>!isFinite(v))) return null;
   return {...classify(predict(x)), startPx: arr[arr.length-1].c, vol60: x[MODEL.features.indexOf('vol60')]};
 }
-function previewForNext(S){
-  // usa o candle em formação como se já tivesse fechado
-  const arr = sorted().filter(x=>x.t < S); if(!arr.length) return null;
-  const x = features(arr); if(!x || x.some(v=>!isFinite(v))) return null;
-  return classify(predict(x));
+function previewFor(S){
+  const arr = sortedCandles().filter(x=>x.t < S); const x = features(arr);
+  return (!x || x.some(v=>!isFinite(v))) ? null : classify(predict(x));
 }
-
-function ensureLogged(S, s){
-  if(logRows.some(r=>r.S===S)) return;
-  logRows.push({S, dir:s.dir, p:+s.p.toFixed(4), conf:+s.conf.toFixed(4), tier:s.tier, startPx:s.startPx, endPx:null, res:null, src:activeSource});
-  saveLog();
-}
-function resolvePending(){
-  let changed=false;
-  logRows.forEach(r=>{
-    if(r.res!=null) return;
-    const endC = candles.get(r.S+240), after = candles.get(r.S+300);
-    if(endC && (after || Date.now()/1000 > r.S+WIN+20)){
-      r.endPx = endC.c;
-      r.res = r.endPx===r.startPx ? 'empate' : ((r.endPx>r.startPx)===(r.dir==='UP') ? 'acerto' : 'erro');
-      changed=true;
-    } else if(Date.now()/1000 > r.S + 3*3600){ r.res='sem dados'; changed=true; }
-  });
-  if(changed) saveLog();
-}
-
-// ---------- tela ----------
-let curSignal=null, curS=null;
-function render(){
-  const now = Date.now()/1000, S = Math.floor(now/WIN)*WIN, E = S+WIN;
-  const arr = sorted(); const last = arr[arr.length-1];
-  document.getElementById('price').textContent = last ? fmtP(last.c) : '—';
-  const lp = [['Binance',live.binance],['Coinbase',live.coinbase]].filter(x=>x[1]);
-  document.getElementById('prices').innerHTML = lp.length
-    ? lp.map(([n,p])=>`<span class="pill">${n} <b>${fmtP(p)}</b></span>`).join('') + (lp.length>1?`<span class="pill">média <b>${fmtP((lp[0][1]+lp[1][1])/2)}</b></span>`:'') + `<span class="pill">tempo real</span>`
-    : '';
-  document.getElementById('winlabel').textContent = `· ${fmtT(S)} → ${fmtT(E)}`;
-  const left = Math.max(0, Math.round(E-now));
-  document.getElementById('countdown').textContent = `${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;
-
-  if(curS!==S){ curSignal=null; curS=S; }
-  if(!curSignal){ const s = signalForWindow(S); if(s){ curSignal=s; ensureLogged(S,s); } }
-  // se a página abriu no meio da janela, mostra o sinal também (marcado)
-  const sigEl = document.getElementById('sig'), big=document.getElementById('sigbig'), tag=document.getElementById('sigtag'), meta=document.getElementById('sigmeta');
-  const logged = logRows.find(r=>r.S===S);
-  if(curSignal){
-    const s=curSignal;
-    sigEl.className='signal '+(s.dir==='UP'?'up':'down')+(s.tier==='coroa'?' faded':'');
-    big.textContent = s.dir==='UP'?'▲ UP':'▼ DOWN';
-    tag.innerHTML = `<span class="tag ${s.tier}">${TIER_LABEL[s.tier]}</span>`;
-    meta.textContent = `Chance estimada de ${s.dir}: ${(s.conf*100).toFixed(1)}%` + (logged? '' : ' · (página aberta no meio da janela)');
-    document.getElementById('startpx').textContent = fmtP(s.startPx);
-    if(last){ const d = last.c - s.startPx; const el=document.getElementById('delta'); el.textContent = (d>=0?'+':'')+d.toFixed(2); el.style.color = d>0?'var(--up)':d<0?'var(--down)':'var(--muted)'; }
-  } else {
-    sigEl.className='signal none'; big.textContent='aguarde…'; tag.innerHTML='';
-    meta.textContent = candles.size ? 'Esperando o candle do início da janela fechar (alguns segundos)' : 'Carregando dados de preço';
-  }
-  // prévia no último minuto
-  const pv = document.getElementById('preview');
-  if(left <= 60){
-    const p = previewForNext(E);
-    if(p){
-      const txt = `<b style="color:${p.dir==='UP'?'var(--up)':'var(--down)'}">${p.dir}</b> (${TIER_LABEL[p.tier]}, ${(p.conf*100).toFixed(1)}%)`;
-      pv.innerHTML = `Prévia da próxima janela (${fmtT(E)}): ${txt} — pode mudar até o início.`;
-    }
-  } else pv.textContent = `Prévia da próxima janela (${fmtT(E)}) aparece no último minuto.`;
-
-  drawChart(arr, S, curSignal && curSignal.startPx);
-  renderNow(S, last); renderLog(); renderStats(); renderBE();
-  if(lastOk && Date.now()-lastOk > 30000) setStatus(false,'dados atrasados…');
-}
-
-function renderLog(){
-  const rows = logRows.slice().reverse().slice(0,300);
-  document.getElementById('log').innerHTML = rows.map(r=>{
-    const res = r.res==null ? '<span class="pend">aguardando</span>' : r.res==='acerto' ? '<span class="hit">✓ acerto</span>' : r.res==='erro' ? '<span class="miss">✗ erro</span>' : `<span class="pend">${r.res}</span>`;
-    const dirc = r.dir==='UP'?'u':'d';
-    return `<tr><td>${fmtD(r.S)}</td><td class="${dirc}">${r.dir}</td><td>${(r.conf*100).toFixed(1)}%</td><td>${r.tier==='nenhum'?'cara ou coroa':TIER_LABEL[r.tier]}</td><td>${fmtP(r.startPx)}</td><td>${fmtP(r.endPx)}</td><td>${res}</td></tr>`;
-  }).join('') || '<tr><td colspan="7" class="note">Nenhuma janela registrada ainda. A primeira entra no próximo início de janela.</td></tr>';
-}
-function acc(filter){
-  const d = logRows.filter(r=>(r.res==='acerto'||r.res==='erro') && filter(r));
-  if(!d.length) return '—';
-  const h = d.filter(r=>r.res==='acerto').length;
-  return `${(100*h/d.length).toFixed(1)}% <span class="note">(${h}/${d.length})</span>`;
-}
-function renderStats(){
-  document.getElementById('accForte').innerHTML = acc(r=>r.tier==='forte');
-  document.getElementById('accFraco').innerHTML = acc(r=>r.tier==='fraco');
-  document.getElementById('accCoroa').innerHTML = acc(r=>r.tier==='coroa'||r.tier==='nenhum');
-}
-// chance de terminar acima do início, calibrada em ~620 mil pontos (jan/2025–set/2026):
-// z = variação desde o início / (volatilidade de 1 min × raiz dos minutos que faltam)
-let nowP = null;
-function chanceNow(S, lastC){
-  if(!curSignal || !lastC || !curSignal.vol60) return null;
-  const left = Math.max(0.1, (S+WIN - Date.now()/1000)/60);
-  const a = 2.07 - 0.103*left;                      // a curva fica mais "certa" perto do fim
-  const z = Math.log(lastC/curSignal.startPx)/(curSignal.vol60*Math.sqrt(left));
-  const prior = Math.log(curSignal.p/(1-curSignal.p)); // sinal de abertura como ponto de partida
-  const p = 1/(1+Math.exp(-(a*z + prior)));
+// chance de terminar acima do preço a bater (calibrada em ~620 mil pontos, jan/2025–set/2026)
+function chanceUp(S, beat, cur, sig){
+  if(beat==null || cur==null || !sig) return null;
+  const left = Math.max(0.1, (S+WIN-now())/60);
+  const a = 2.07 - 0.103*left;
+  const z = Math.log(cur/beat)/(sig.vol60*Math.sqrt(left));
+  const p = 1/(1+Math.exp(-(a*z + Math.log(sig.p/(1-sig.p)))));
   return Math.min(0.99, Math.max(0.01, p));
 }
-function renderNow(S, last){
-  nowP = last ? chanceNow(S, last.c) : null;
-  const up = document.getElementById('nowup'), dn = document.getElementById('nowdn'), txt = document.getElementById('nowtxt'), bar = document.getElementById('barup');
-  if(nowP==null){ up.textContent='—'; dn.textContent='—'; txt.textContent='aguardando o início da janela'; bar.style.width='50%'; return; }
-  up.textContent = Math.round(nowP*100)+'%'; dn.textContent = Math.round((1-nowP)*100)+'%';
-  const lead = nowP>=0.5 ? 'UP' : 'DOWN', c = Math.max(nowP,1-nowP);
-  txt.innerHTML = `<span style="color:${lead==='UP'?'var(--up)':'var(--down)'}">${lead} ${Math.round(c*100)}%</span>`;
-  bar.style.width = (nowP*100).toFixed(1)+'%';
+
+/* ============ placar do modelo ============ */
+const LOG_KEY = 'previsor_btc5_log_v1';
+let modelLog = store.get(LOG_KEY, []);
+function logSignal(S, s){
+  if(modelLog.some(r=>r.S===S)) return;
+  modelLog.push({S, dir:s.dir, p:+s.p.toFixed(4), conf:+s.conf.toFixed(4), tier:s.tier, startPx:s.startPx, endPx:null, res:null, src:activeSource});
+  modelLog = modelLog.slice(-2000); store.set(LOG_KEY, modelLog);
 }
-const usd = v => 'US$ '+v.toFixed(2).replace('.',',');
-function renderBE(){
-  const side = document.getElementById('side').value;
-  const stake = Math.max(0.01, +document.getElementById('stake').value || 1);
-  const payout = Math.max(stake, +document.getElementById('payout').value || 2);
-  const need = stake/payout;                       // % mínimo de acerto pra empatar
-  const st = MODEL.stats, el = document.getElementById('be');
-  const color = side==='UP' ? 'var(--up)' : 'var(--down)';
-  const head = `Apostando <b>${usd(stake)}</b> pra receber <b>${usd(payout)}</b> (lucro de ${usd(payout-stake)}), você precisa acertar mais de <b>${(need*100).toFixed(0)}%</b> das vezes pra não perder dinheiro.`;
-  if(nowP==null){ el.innerHTML = head + ' Quando a janela começar, aparece aqui se vale a pena.'; }
+function resolveModelLog(){
+  let ch = false;
+  modelLog.forEach(r=>{
+    if(r.res!=null) return;
+    const endC = candles.get(r.S+240);
+    if(endC && (candles.get(r.S+300) || now() > r.S+WIN+20)){
+      r.endPx = endC.c; r.res = r.endPx===r.startPx ? 'empate' : ((r.endPx>r.startPx)===(r.dir==='UP') ? 'acerto' : 'erro'); ch = true;
+    } else if(now() > r.S + 3*3600){ r.res = 'sem dados'; ch = true; }
+  });
+  if(ch) store.set(LOG_KEY, modelLog);
+}
+
+/* ============ carteira simulada ============ */
+const W_KEY = 'previsor_wallet_v1';
+let wallet = store.get(W_KEY, null) || {initial:100, balance:100, bets:[], hist:[{t:Math.floor(Date.now()/1000), b:100}]};
+const saveWallet = () => store.set(W_KEY, wallet);
+const equity = () => +(wallet.balance + wallet.bets.filter(b=>b.status==='aberta').reduce((a,b)=>a+b.amount,0)).toFixed(2);
+function resolveBets(){
+  let ch = false;
+  wallet.bets.forEach(b=>{
+    if(b.status!=='aberta') return;
+    if(now() < b.S + WIN + 2) return;
+    const r = windowResult(b.S);
+    if(!r){
+      for(const f of Object.keys(feeds)){ if(!(boundary[b.S]||{})[f]) fetchBoundary(f, b.S); if(!(boundary[b.S+WIN]||{})[f]) fetchBoundary(f, b.S+WIN); }
+      if(now() > b.S + WIN + 6*3600){ b.status='cancelada'; b.payout=b.amount; wallet.balance += b.amount; ch = true; }
+      return;
+    }
+    b.beat = r.beat; b.end = r.end;
+    if(Math.abs(r.delta) < 1e-9){ b.status='empate'; b.payout=b.amount; }
+    else { const win = (r.delta>0) === (b.side==='UP'); b.status = win?'ganhou':'perdeu'; b.payout = win ? +(b.amount*b.mult).toFixed(2) : 0; }
+    wallet.balance = +(wallet.balance + b.payout).toFixed(2);
+    wallet.hist.push({t:Math.floor(now()), b:equity()});
+    ch = true;
+  });
+  if(ch){ wallet.hist = wallet.hist.slice(-1000); saveWallet(); renderWallet(); }
+}
+
+/* ============ bilhete ============ */
+let ticketSide = 'UP', lastChance = null;
+function parseMult(){
+  const raw = ($('mult').value||'').trim().replace(',','.');
+  if(!raw) return null;
+  if(raw.endsWith('%')){ const p = parseFloat(raw)/100; return p>0 && p<1 ? {m:1/p, from:'pct'} : null; }
+  const m = parseFloat(raw.replace(/x$/i,'')); if(!(m>1)) return null;
+  if(m > 1.0 && m <= 100) return {m, from:'x'};
+  return null;
+}
+function effectiveMult(){
+  const typed = parseMult(); if(typed) return {...typed, est:false};
+  if(lastChance==null) return null;
+  const c = ticketSide==='UP' ? lastChance : 1-lastChance;
+  return {m: Math.max(1.01, 1/Math.min(0.99, c + 0.02)), est:true};
+}
+function renderTicket(){
+  const amt = parseFloat(($('amount').value||'').replace(',','.')) || 0;
+  const em = effectiveMult();
+  const S = Math.floor(now()/WIN)*WIN;
+  const chance = lastChance==null ? null : (ticketSide==='UP' ? lastChance : 1-lastChance);
+  $('roPay').textContent = em ? money(amt*em.m) : '—';
+  $('roNeed').textContent = em ? (100/em.m).toFixed(0)+'%' : '—';
+  $('roChance').textContent = chance==null ? '—' : (chance*100).toFixed(0)+'%';
+  $('multHint').textContent = em && em.est ? `Usando estimativa ${em.m.toFixed(2)}x. Para um teste real, digite o multiplicador do app.` : (em && em.from==='pct' ? `${$('mult').value.trim()} equivale a ${em.m.toFixed(2)}x.` : 'Digite o "1.7x" do app, ou a porcentagem (60%). Em branco, usa uma estimativa.');
+  const v = $('verdict');
+  if(chance==null || !em){ v.className='verdict meh'; v.textContent='A análise aparece quando a janela estiver rodando.'; }
   else {
-    const chance = side==='UP' ? nowP : 1-nowP;
-    const ev = chance*payout - stake;               // ganho médio por aposta
-    const edge = (chance - need)*100, MIN = 5;
-    let verdict;
-    if(edge >= MIN) verdict = `<b style="color:${color}">${side} vale a pena</b>: chance ${(chance*100).toFixed(0)}% contra ${(need*100).toFixed(0)}% necessários. Ganho médio de ${usd(ev)} por aposta, a longo prazo.`;
-    else if(edge > 0) verdict = `<b>No limite.</b> ${side} tem chance ${(chance*100).toFixed(0)}% e precisa de ${(need*100).toFixed(0)}%. A folga é pequena demais pra cobrir taxa e erro do modelo.`;
-    else verdict = `<b>Não vale.</b> ${side} tem chance ${(chance*100).toFixed(0)}% e precisa de ${(need*100).toFixed(0)}%. Perda média de ${usd(-ev)} por aposta.`;
-    el.innerHTML = head + '<br>' + verdict + ' <span class="note">Atualize os valores quando mudarem no app.</span>';
+    const need = 1/em.m, edge = chance - need, ev = chance*em.m - 1;
+    const sideTxt = ticketSide==='UP' ? 'Acima' : 'Abaixo';
+    if(em.est){ v.className='verdict meh'; v.innerHTML = `Sem o multiplicador do app, não dá pra saber se ${sideTxt} está barato. Chance do modelo: <b>${(chance*100).toFixed(0)}%</b>.`; }
+    else if(edge >= 0.03){ v.className='verdict good'; v.innerHTML = `<b class="u">Vale a pena.</b> ${sideTxt} tem ${(chance*100).toFixed(0)}% e o app paga como se fosse ${(need*100).toFixed(0)}%. Ganho médio de ${money(amt*ev)} por aposta, a longo prazo.`; }
+    else if(edge > 0){ v.className='verdict meh'; v.innerHTML = `<b>No limite.</b> ${(chance*100).toFixed(0)}% contra ${(need*100).toFixed(0)}% necessários. Folga pequena demais pra cobrir erro do modelo.`; }
+    else { v.className='verdict bad'; v.innerHTML = `<b class="d">Não vale.</b> ${sideTxt} tem ${(chance*100).toFixed(0)}% e precisa de ${(need*100).toFixed(0)}%. Perda média de ${money(-amt*ev)} por aposta.`; }
   }
-  document.getElementById('bt').innerHTML =
-    `<b>No teste com dados reais</b> (jan/2025–set/2026): sinal de abertura FORTE acertou ${st.forte.acc}% (~${st.forte.per_day} por dia), fraco ${st.fraco.acc}%, todas ${st.todas.acc}%. ` +
-    `Seguindo quem está ganhando no meio da janela: 1 min depois do início 66%, 2 min 74%, 3 min 80%, 4 min 88%. Só que nesse ponto a Phantom já cobra mais caro pelo lado que está ganhando. Passado não garante futuro.`;
+  const btn = $('betBtn');
+  btn.className = 'cta ' + (ticketSide==='UP'?'up':'down');
+  btn.textContent = `Apostar ${ticketSide==='UP'?'▲ Acima':'▼ Abaixo'} · ${money(amt)}`;
+  const st = windowState(S);
+  btn.disabled = !(amt>=1 && amt<=wallet.balance+1e-9 && em && st && (S+WIN-now()) > 3);
+  const open = wallet.bets.filter(b=>b.status==='aberta');
+  $('openBets').innerHTML = open.map(b=>{
+    const r = windowState(b.S); let live = '';
+    if(r && r.cur!=null && b.S===S){ const winning = (r.cur>r.beat)===(b.side==='UP'); live = `<span class="${winning?'pos':'neg'}">${winning?'ganhando':'perdendo'}</span>`; }
+    else live = '<span class="pend">conferindo resultado…</span>';
+    return `<div class="ob"><span>${b.side==='UP'?'<b class="u">▲ Acima</b>':'<b class="d">▼ Abaixo</b>'} · ${hm(b.S)} · ${b.mult.toFixed(2)}x</span><span class="r">${money(b.amount)} → ${money(b.amount*b.mult)} ${live}</span></div>`;
+  }).join('');
+}
+function placeBet(){
+  const amt = +(parseFloat(($('amount').value||'').replace(',','.'))||0).toFixed(2);
+  const em = effectiveMult(); const S = Math.floor(now()/WIN)*WIN; const msg = $('betMsg');
+  if(!(amt>=1)){ msg.textContent = 'A aposta mínima é $1.'; return; }
+  if(amt > wallet.balance + 1e-9){ msg.textContent = 'Saldo insuficiente. Recomece a carteira na aba Carteira.'; return; }
+  if(!em){ msg.textContent = 'Aguarde a janela começar.'; return; }
+  wallet.balance = +(wallet.balance - amt).toFixed(2);
+  wallet.bets.push({id:Date.now(), S, side:ticketSide, amount:amt, mult:+em.m.toFixed(3), est:em.est, chance:lastChance==null?null:+(ticketSide==='UP'?lastChance:1-lastChance).toFixed(3), placedAt:Math.floor(now()), status:'aberta', payout:null});
+  saveWallet(); msg.textContent = `Aposta registrada. Resultado às ${hm(S+WIN)}.`;
+  renderWallet(); renderTicket();
 }
 
-function drawChart(arr, S, startPx){
-  const cv = document.getElementById('chart'), dpr = window.devicePixelRatio||1;
-  const W = cv.clientWidth, H = cv.clientHeight; cv.width = W*dpr; cv.height = H*dpr;
+/* ============ carteira: tela ============ */
+function renderWallet(){
+  const done = wallet.bets.filter(b=>['ganhou','perdeu'].includes(b.status));
+  const openStake = wallet.bets.filter(b=>b.status==='aberta').reduce((a,b)=>a+b.amount,0);
+  const pl = wallet.balance + openStake - wallet.initial;
+  const wins = done.filter(b=>b.status==='ganhou').length;
+  $('walletTop').textContent = money(wallet.balance);
+  $('wBal').textContent = money(wallet.balance);
+  $('wOpen').textContent = openStake ? `${money(openStake)} em aposta aberta` : `começou com ${money(wallet.initial)}`;
+  $('wPL').textContent = (pl>=0?'+':'') + money(pl); $('wPL').className = 'v ' + (pl>0?'pos':pl<0?'neg':'');
+  $('wPLpct').textContent = wallet.initial ? `${pl>=0?'+':''}${(100*pl/wallet.initial).toFixed(1)}% do saldo inicial` : '';
+  $('wWin').textContent = done.length ? `${(100*wins/done.length).toFixed(0)}%` : '—';
+  $('wWinN').textContent = done.length ? `${wins} de ${done.length}` : 'nenhuma resolvida';
+  $('wCount').textContent = wallet.bets.length;
+  const avg = wallet.bets.length ? wallet.bets.reduce((a,b)=>a+b.amount,0)/wallet.bets.length : 0;
+  $('wAvg').textContent = wallet.bets.length ? `média de ${money(avg)}` : '';
+  $('betRows').innerHTML = wallet.bets.slice().reverse().slice(0,300).map(b=>{
+    const res = b.status==='aberta' ? '<span class="pend">aberta</span>'
+      : b.status==='ganhou' ? `<span class="pos">+${money(b.payout-b.amount)}</span>`
+      : b.status==='perdeu' ? `<span class="neg">-${money(b.amount)}</span>` : `<span class="pend">${b.status}</span>`;
+    return `<tr><td>${dhm(b.S)}</td><td>${b.side==='UP'?'<span class="u">▲ Acima</span>':'<span class="d">▼ Abaixo</span>'}</td><td class="num">${money(b.amount)}</td><td class="num">${b.mult.toFixed(2)}x${b.est?'*':''}</td><td class="num">${b.chance==null?'—':Math.round(b.chance*100)+'%'}</td><td>${res}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="empty">Nenhuma aposta ainda. Faça a primeira no quadro "Apostar na simulação".</td></tr>';
+  drawSpark();
+}
+function drawSpark(){
+  const cv = $('spark'); if(!cv.offsetParent) return;
+  const dpr = devicePixelRatio||1, W = cv.clientWidth, H = cv.clientHeight; cv.width = W*dpr; cv.height = H*dpr;
   const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
-  const pts = arr.slice(-60); if(pts.length<2) return;
-  const css = getComputedStyle(document.documentElement);
-  let lo = Math.min(...pts.map(p=>p.l)), hi = Math.max(...pts.map(p=>p.h));
-  if(startPx){ lo=Math.min(lo,startPx); hi=Math.max(hi,startPx); }
-  const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
-  const L=8, R=W-64, T=8, B=H-22;
-  const t0=pts[0].t, t1=pts[pts.length-1].t+60;
-  const X=t=>L+(t-t0)/(t1-t0)*(R-L), Y=p=>B-(p-lo)/(hi-lo)*(B-T);
-  g.font='11px system-ui'; g.fillStyle=css.getPropertyValue('--muted');
-  g.strokeStyle=css.getPropertyValue('--line'); g.lineWidth=1;
-  for(let t=Math.ceil(t0/WIN)*WIN; t<=t1; t+=WIN){ g.beginPath(); g.moveTo(X(t),T); g.lineTo(X(t),B); g.stroke(); if((t/WIN)%3===0) g.fillText(fmtT(t), X(t)-14, H-6); }
-  for(let k=0;k<=3;k++){ const p=lo+(hi-lo)*k/3; g.fillText(Math.round(p).toLocaleString('en-US'), R+6, Y(p)+4); }
-  if(startPx){ g.setLineDash([5,4]); g.strokeStyle=css.getPropertyValue('--accent'); g.beginPath(); g.moveTo(X(S),Y(startPx)); g.lineTo(R,Y(startPx)); g.stroke(); g.setLineDash([]); }
-  const lastC = pts[pts.length-1].c;
-  g.strokeStyle = startPx ? (lastC>=startPx?css.getPropertyValue('--up'):css.getPropertyValue('--down')) : css.getPropertyValue('--text');
-  g.lineWidth=2; g.beginPath(); pts.forEach((p,k)=>{ const x=X(p.t+60), y=Y(p.c); k?g.lineTo(x,y):g.moveTo(x,y); }); g.stroke();
+  const pts = wallet.hist; const css = getComputedStyle(document.documentElement);
+  if(pts.length < 2){ g.fillStyle = css.getPropertyValue('--faint'); g.font = '12px Manrope, sans-serif'; g.fillText('O gráfico do saldo aparece depois das primeiras apostas.', 4, H/2); return; }
+  let lo = Math.min(wallet.initial, ...pts.map(p=>p.b)), hi = Math.max(wallet.initial, ...pts.map(p=>p.b)); if(hi===lo){ hi+=1; lo-=1; }
+  const X = i => 4 + i/(pts.length-1)*(W-8), Y = v => 8 + (hi-v)/(hi-lo)*(H-16);
+  g.strokeStyle = css.getPropertyValue('--line'); g.setLineDash([4,4]); g.beginPath(); g.moveTo(0,Y(wallet.initial)); g.lineTo(W,Y(wallet.initial)); g.stroke(); g.setLineDash([]);
+  const last = pts[pts.length-1].b, col = css.getPropertyValue(last>=wallet.initial?'--up':'--down').trim();
+  const grd = g.createLinearGradient(0,0,0,H); grd.addColorStop(0, col+'33'); grd.addColorStop(1, col+'00');
+  g.beginPath(); pts.forEach((p,i)=> i?g.lineTo(X(i),Y(p.b)):g.moveTo(X(i),Y(p.b))); g.lineTo(X(pts.length-1),H); g.lineTo(X(0),H); g.closePath(); g.fillStyle = grd; g.fill();
+  g.beginPath(); pts.forEach((p,i)=> i?g.lineTo(X(i),Y(p.b)):g.moveTo(X(i),Y(p.b))); g.strokeStyle = col; g.lineWidth = 2; g.stroke();
+  g.beginPath(); g.arc(X(pts.length-1), Y(last), 3.5, 0, 7); g.fillStyle = col; g.fill();
 }
 
-// ---------- eventos ----------
-document.getElementById('src').addEventListener('change', e=>{ source=e.target.value; activeSource=null; candles=new Map(); curSignal=null; pull(1000).then(render); });
-let wakeLock=null;
-document.getElementById('wake').addEventListener('click', async ()=>{
-  const b=document.getElementById('wake');
-  try{
-    if(wakeLock){ await wakeLock.release(); wakeLock=null; b.textContent='Manter tela ligada'; return; }
-    wakeLock = await navigator.wakeLock.request('screen'); b.textContent='Tela fica ligada ✓';
-    wakeLock.addEventListener('release', ()=>{ wakeLock=null; b.textContent='Manter tela ligada'; });
-  }catch(e){ b.textContent='Seu navegador não deixou'; }
-});
-['side','stake','payout'].forEach(id=>{
-  const el=document.getElementById(id);
-  try{ const v=localStorage.getItem('previsor_'+id); if(v) el.value=v; }catch(e){}
-  el.addEventListener('input', renderBE); el.addEventListener('change', ()=>{ try{ localStorage.setItem('previsor_'+id, el.value); }catch(err){} renderBE(); });
-});
-document.getElementById('csv').addEventListener('click', ()=>{
-  const head='janela,sinal,prob_up,confianca,forca,preco_inicio,preco_fim,resultado,fonte\n';
-  const body=logRows.map(r=>[new Date(r.S*1000).toISOString(),r.dir,r.p,r.conf,r.tier,r.startPx,r.endPx??'',r.res??'',r.src??''].join(',')).join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([head+body],{type:'text/csv'})); a.download='previsoes_btc_5min.csv'; a.click();
-});
-document.getElementById('clear').addEventListener('click', ()=>{
-  const b=document.getElementById('clear');
-  if(b.dataset.armed){ logRows=[]; saveLog(); delete b.dataset.armed; b.textContent='Zerar placar'; render(); }
-  else { b.dataset.armed='1'; b.textContent='Clique de novo pra confirmar'; setTimeout(()=>{ delete b.dataset.armed; b.textContent='Zerar placar'; },4000); }
-});
-window.addEventListener('resize', render);
+/* ============ gráfico principal ============ */
+let range = 'live';
+const tickSeries = []; // {t, p} amostrado a cada 250 ms (últimas ~1h10)
+function sample(){
+  const S = Math.floor(now()/WIN)*WIN, st = windowState(S);
+  let p = null;
+  if(st && st.cur!=null) p = st.cur;
+  else { const lf = liveFeeds(); if(lf.length) p = lf.reduce((a,f)=>a+feeds[f].last.p,0)/lf.length; }
+  if(p==null) return;
+  tickSeries.push({t:now(), p});
+  while(tickSeries.length && tickSeries[0].t < now()-4300) tickSeries.shift();
+}
+// candles de 1 min da fonte do modelo, deslocados pra ficar na mesma escala do preço combinado
+function candleSeries(from){
+  const arr = sortedCandles().filter(c=>c.t+60 >= from);
+  if(!arr.length) return [];
+  let off = 0; const lastC = arr[arr.length-1];
+  if(tickSeries.length){ off = tickSeries[tickSeries.length-1].p - lastC.c; }
+  return arr.map(c=>({t:c.t+60, p:c.c+off}));
+}
+function seriesFor(r){
+  const t = now(), S = Math.floor(t/WIN)*WIN;
+  if(r==='live'){
+    const st = windowState(S);
+    let pts = tickSeries.filter(x=>x.t>=S);
+    const firstTick = pts.length ? pts[0].t : t;
+    if(firstTick - S > 20){ pts = candleSeries(S).filter(x=>x.t < firstTick).concat(pts); }
+    if(st) pts = [{t:S, p:st.beat}].concat(pts.filter(x=>x.t>S));
+    return {pts, x0:S, x1:S+WIN, beat: st ? st.beat : null};
+  }
+  const span = r==='15m' ? 900 : r==='1h' ? 3600 : 86400, from = t - span;
+  let pts;
+  if(r==='1d'){ pts = candleSeries(from); const step = 5; pts = pts.filter((_,i)=> i%step===0 || i===pts.length-1); }
+  else {
+    const bucket = r==='15m' ? 2 : 10, ticks = [];
+    tickSeries.filter(x=>x.t>=from).forEach(x=>{ const k = Math.floor(x.t/bucket); if(ticks.length && Math.floor(ticks[ticks.length-1].t/bucket)===k) ticks[ticks.length-1] = x; else ticks.push(x); });
+    const cut = ticks.length ? ticks[0].t : t;
+    pts = candleSeries(from).filter(x=>x.t < cut - 5).concat(ticks);
+  }
+  const st = windowState(S);
+  return {pts, x0:from, x1:t + span*0.04, beat: st ? st.beat : null};
+}
+let yLo = null, yHi = null, shown = null, lastFrame = 0;
+function drawChart(ts){
+  const dt = Math.min(100, ts - (lastFrame||ts)); lastFrame = ts;
+  const cv = $('chart'), dpr = devicePixelRatio||1, W = cv.clientWidth, H = cv.clientHeight;
+  if(cv.width !== Math.round(W*dpr) || cv.height !== Math.round(H*dpr)){ cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); }
+  const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+  const {pts, x0, x1, beat} = seriesFor(range);
+  const L = 6, R = W - 84, T = 14, B = H - 22;
+  if(!pts.length){ g.fillStyle = col('--faint'); g.font = '13px Manrope, sans-serif'; g.fillText('Conectando ao preço ao vivo…', L+8, H/2); requestAnimationFrame(drawChart); return; }
+  // ponta suave: o último ponto desliza até o preço mais recente
+  const target = pts[pts.length-1].p;
+  if(shown==null || Math.abs(shown-target) > target*0.01) shown = target;
+  shown += (target - shown) * (1 - Math.exp(-dt/140));
+  const view = pts.slice(0,-1).concat([{t: Math.min(now(), x1), p: shown}]);
+  let lo = Math.min(...view.map(p=>p.p)), hi = Math.max(...view.map(p=>p.p));
+  if(beat!=null && range==='live'){ lo = Math.min(lo, beat); hi = Math.max(hi, beat); }
+  const pad = Math.max((hi-lo)*0.12, hi*0.00004); lo -= pad; hi += pad;
+  if(yLo==null || range!==drawChart.r){ yLo = lo; yHi = hi; drawChart.r = range; }
+  const k = 1 - Math.exp(-dt/300); yLo += (lo-yLo)*k; yHi += (hi-yHi)*k;
+  const X = t => L + (t-x0)/(x1-x0)*(R-L), Y = p => B - (p-yLo)/(yHi-yLo)*(B-T);
+  // grade e eixo de preço
+  g.font = '11px "Geist Mono", ui-monospace, monospace'; g.textAlign = 'left';
+  for(let i=0;i<=4;i++){
+    const p = yLo + (yHi-yLo)*(i/4), y = Y(p);
+    g.strokeStyle = col('--surface-3'); g.lineWidth = 1; g.beginPath(); g.moveTo(L,y); g.lineTo(R,y); g.stroke();
+    if(beat!=null && Math.abs(y - Y(beat)) < 16) continue;
+    g.fillStyle = col('--faint'); g.fillText('$'+p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}), R+8, y+4);
+  }
+  // eixo de tempo
+  g.fillStyle = col('--faint');
+  const steps = range==='live' ? [60,120] : [60,300,600,900,1800,3600,7200,14400,21600,43200];
+  const tStep = steps.find(st => (R-L)*st/(x1-x0) >= 58) || steps[steps.length-1];
+  for(let t=Math.ceil(x0/tStep)*tStep; t<=x1; t+=tStep){ const x = X(t); if(x>L+14 && x<R-14){ g.textAlign='center'; g.fillText(range==='live' ? '+'+Math.round((t-x0)/60)+'m' : hm(t), x, H-5); } }
+  g.textAlign = 'left';
+  // preço a bater
+  const lastP = view[view.length-1].p, above = beat==null || lastP >= beat;
+  const lineCol = col(above ? '--up' : '--down');
+  if(beat!=null){
+    const y = Y(beat);
+    if(y>T-2 && y<B+2){
+      g.setLineDash([6,5]); g.strokeStyle = col('--muted'); g.lineWidth = 1.2; g.beginPath(); g.moveTo(L,y); g.lineTo(R,y); g.stroke(); g.setLineDash([]);
+      const txt = '$'+beat.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); const w = g.measureText(txt).width + 14;
+      g.fillStyle = col('--text'); roundRect(g, R+2, y-11, Math.min(w, W-R-2), 22, 11); g.fill();
+      g.fillStyle = col('--bg'); g.fillText(txt, R+9, y+4);
+    }
+  }
+  // linha suave + preenchimento
+  const P = view.map(p=>[X(p.t), Y(p.p)]);
+  const path = ()=>{ g.beginPath(); g.moveTo(P[0][0],P[0][1]); for(let i=1;i<P.length;i++){ const [xa,ya]=P[i-1], [xb,yb]=P[i]; const mx=(xa+xb)/2, my=(ya+yb)/2; g.quadraticCurveTo(xa,ya,mx,my); } g.lineTo(P[P.length-1][0],P[P.length-1][1]); };
+  path(); g.lineTo(P[P.length-1][0], B); g.lineTo(P[0][0], B); g.closePath();
+  const grd = g.createLinearGradient(0,T,0,B); grd.addColorStop(0, lineCol+'2e'); grd.addColorStop(1, lineCol+'00'); g.fillStyle = grd; g.fill();
+  path(); g.strokeStyle = lineCol; g.lineWidth = 2.4; g.lineJoin='round'; g.lineCap='round'; g.stroke();
+  // ponto pulsando
+  const [ex,ey] = P[P.length-1], pulse = (Math.sin(ts/380)+1)/2;
+  g.beginPath(); g.arc(ex,ey, 5+pulse*6, 0, 7); g.fillStyle = lineCol + '30'; g.fill();
+  g.beginPath(); g.arc(ex,ey, 4.5, 0, 7); g.fillStyle = lineCol; g.fill();
+  requestAnimationFrame(drawChart);
+}
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
 
-// ---------- loop ----------
-(async function start(){
-  await pull(1000); render();
-  openBinanceWS(); openCoinbaseWS();
-  // com tempo real ligado, o REST só completa buracos; sem ele, consulta a cada 2 s
-  let tick = 0;
-  setInterval(async ()=>{
-    tick++;
-    const wsFresh = activeSource==='binance' && wsBinOk && Date.now()-lastWsMsg < 10000;
-    if(!wsFresh || tick % 10 === 0) await pull(10);
-    resolvePending();
-  }, 2000);
-  setInterval(render, 1000);
+/* ============ tela ao vivo ============ */
+let curS = null, curSignal = null;
+function renderLive(){
+  const t = now(), S = Math.floor(t/WIN)*WIN, E = S+WIN, left = Math.max(0, E-t);
+  if(curS!==S){ curS = S; curSignal = null; $('betMsg').textContent = ''; }
+  if(!curSignal){ const s = signalForWindow(S); if(s){ curSignal = s; logSignal(S, s); } }
+  $('winLabel').textContent = `Janela ${hm(S)} → ${hm(E)}`;
+  $('countdown').textContent = `${String(Math.floor(left/60)).padStart(2,'0')}:${String(Math.floor(left%60)).padStart(2,'0')}`;
+  $('ring').style.strokeDashoffset = (40.84*(1-left/WIN)).toFixed(2);
+  $('prog').style.width = ((1-left/WIN)*100).toFixed(1)+'%';
+  const st = windowState(S);
+  if(t - S > 3) for(const f of liveFeeds()) if(!(boundary[S]||{})[f]) fetchBoundary(f, S);
+  const cur = st && st.cur!=null ? st.cur : (liveFeeds().length ? liveFeeds().reduce((a,f)=>a+feeds[f].last.p,0)/liveFeeds().length : null);
+  $('price').textContent = pxFmt(shown!=null && range==='live' ? shown : cur);
+  const vs = $('vs');
+  if(st && st.cur!=null){
+    const d = st.cur - st.beat, pct = d/st.beat*100;
+    vs.className = 'vs ' + (d>=0?'up':'down');
+    vs.textContent = `${d>=0?'+':''}${pct.toFixed(3)}% (${d>=0?'+':'-'}$${Math.abs(d).toFixed(2)}) ${d>=0?'acima':'abaixo'} do preço a bater ${pxFmt(st.beat)}`;
+  } else { vs.className='vs'; vs.textContent = 'aguardando o preço a bater desta janela'; }
+  lastChance = st && st.cur!=null ? chanceUp(S, st.beat, st.cur, curSignal) : null;
+  $('pUp').textContent = lastChance==null ? '—' : Math.round(lastChance*100)+'%';
+  $('pDn').textContent = lastChance==null ? '—' : Math.round((1-lastChance)*100)+'%';
+  $('xUp').textContent = lastChance==null ? 'justo: —' : `justo: ${(1/lastChance).toFixed(2)}x`;
+  $('xDn').textContent = lastChance==null ? 'justo: —' : `justo: ${(1/(1-lastChance)).toFixed(2)}x`;
+  const strip = $('sigStrip');
+  if(curSignal){
+    const s = curSignal;
+    strip.innerHTML = `Sinal de abertura <b class="${s.dir==='UP'?'u':'d'}">${s.dir==='UP'?'▲ Acima':'▼ Abaixo'}</b> <span class="tag ${s.tier}">${TIER_LABEL[s.tier]}</span> <span class="num">${(s.conf*100).toFixed(1)}%</span>`;
+  } else strip.textContent = candles.size ? 'Calculando o sinal de abertura…' : 'Carregando candles do modelo…';
+  const pv = $('preview');
+  if(left <= 60){ const p = previewFor(E); if(p){ pv.hidden = false; pv.innerHTML = `Próxima janela (${hm(E)}): <b class="${p.dir==='UP'?'u':'d'}">${p.dir==='UP'?'▲ Acima':'▼ Abaixo'}</b> <span class="tag ${p.tier}">${TIER_LABEL[p.tier]}</span> <span class="num">${(p.conf*100).toFixed(1)}%</span> · pode mudar até começar`; } }
+  else pv.hidden = true;
+  const fs = Object.keys(feeds).filter(f=>feeds[f].last).map(f=>`${feeds[f].name} <b>${pxFmt(feeds[f].last.p)}</b>${Date.now()-feeds[f].lastMsg>15000?' (parado)':''}`);
+  $('feeds').innerHTML = fs.join('') ? fs.map(x=>`<span>${x}</span>`).join('') : '';
+  const lf = liveFeeds();
+  $('dot').className = 'dot ' + (lf.length ? 'ok' : 'err');
+  $('statusTxt').textContent = lf.length ? `ao vivo · ${lf.length} fonte${lf.length>1?'s':''}` : 'sem conexão';
+  renderTicket();
+}
+function renderModel(){
+  const acc = f=>{ const d = modelLog.filter(r=>(r.res==='acerto'||r.res==='erro') && f(r)); const h = d.filter(r=>r.res==='acerto').length; return d.length ? [`${(100*h/d.length).toFixed(1)}%`, `${h} de ${d.length}`] : ['—','sem dados']; };
+  [['Forte',r=>r.tier==='forte'],['Fraco',r=>r.tier==='fraco'],['Coroa',r=>r.tier==='coroa'||r.tier==='nenhum']].forEach(([k,f])=>{ const [a,n] = acc(f); $('m'+k).textContent = a; $('m'+k+'N').textContent = n; });
+  $('logRows').innerHTML = modelLog.slice().reverse().slice(0,200).map(r=>{
+    const res = r.res==null ? '<span class="pend">aguardando</span>' : r.res==='acerto' ? '<span class="pos">✓ acerto</span>' : r.res==='erro' ? '<span class="neg">✗ erro</span>' : `<span class="pend">${r.res}</span>`;
+    return `<tr><td>${dhm(r.S)}</td><td class="${r.dir==='UP'?'u':'d'}">${r.dir==='UP'?'▲ Acima':'▼ Abaixo'}</td><td class="num">${(r.conf*100).toFixed(1)}%</td><td><span class="tag ${r.tier==='nenhum'?'coroa':r.tier}">${TIER_LABEL[r.tier]||'cara ou coroa'}</span></td><td>${res}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="empty">Nenhuma janela registrada ainda.</td></tr>';
+}
+
+/* ============ eventos ============ */
+document.querySelectorAll('.ranges button').forEach(b=>b.addEventListener('click',()=>{
+  range = b.dataset.range; document.querySelectorAll('.ranges button').forEach(x=>x.setAttribute('aria-pressed', x===b)); store.set('previsor_range', range);
+}));
+function setSide(s){
+  ticketSide = s;
+  document.querySelectorAll('[data-tside]').forEach(x=>x.setAttribute('aria-pressed', x.dataset.tside===s));
+  document.querySelectorAll('.odd').forEach(x=>x.setAttribute('aria-pressed', x.dataset.side===s));
+  $('mult').value = ''; renderTicket();
+}
+document.querySelectorAll('[data-tside]').forEach(b=>b.addEventListener('click',()=>setSide(b.dataset.tside)));
+document.querySelectorAll('.odd').forEach(b=>b.addEventListener('click',()=>{ setSide(b.dataset.side); $('amount').scrollIntoView({behavior:'smooth', block:'center'}); }));
+document.querySelectorAll('[data-amt]').forEach(b=>b.addEventListener('click',()=>{ $('amount').value = b.dataset.amt==='max' ? Math.floor(wallet.balance*100)/100 : b.dataset.amt; store.set('previsor_amt', $('amount').value); renderTicket(); }));
+$('amount').addEventListener('input', ()=>{ store.set('previsor_amt', $('amount').value); renderTicket(); });
+$('mult').addEventListener('input', renderTicket);
+$('betBtn').addEventListener('click', placeBet);
+function showTab(name){
+  document.querySelectorAll('[role=tab]').forEach(x=>x.setAttribute('aria-selected', x.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(p=>p.hidden = p.dataset.panel!==name);
+  if(name==='carteira') drawSpark(); if(name==='modelo') renderModel();
+}
+document.querySelectorAll('[role=tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+$('walletChip').addEventListener('click', ()=>{ showTab('carteira'); document.querySelector('.tabs-card').scrollIntoView({behavior:'smooth'}); });
+function twoStep(btn, label, action){
+  btn.addEventListener('click', ()=>{
+    if(btn.dataset.armed){ delete btn.dataset.armed; btn.textContent = label; action(); }
+    else { btn.dataset.armed = '1'; btn.textContent = 'Toque de novo pra confirmar'; setTimeout(()=>{ delete btn.dataset.armed; btn.textContent = label; }, 4000); }
+  });
+}
+twoStep($('resetBtn'), 'Recomeçar', ()=>{
+  const v = Math.max(1, parseFloat(($('initBal').value||'').replace(',','.')) || 100);
+  wallet = {initial:v, balance:v, bets:[], hist:[{t:Math.floor(now()), b:v}]}; saveWallet(); renderWallet(); renderTicket();
+});
+twoStep($('clearLog'), 'Zerar placar do modelo', ()=>{ modelLog = []; store.set(LOG_KEY, modelLog); renderModel(); });
+$('csvBtn').addEventListener('click', ()=>{
+  const head = 'janela,sinal,prob_up,confianca,forca,preco_inicio,preco_fim,resultado,fonte\n';
+  const body = modelLog.map(r=>[new Date(r.S*1000).toISOString(),r.dir,r.p,r.conf,r.tier,r.startPx,r.endPx??'',r.res??'',r.src??''].join(',')).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([head+body],{type:'text/csv'})); a.download = 'previsoes_btc_5min.csv'; a.click();
+});
+$('src').addEventListener('change', e=>{ source = e.target.value; activeSource = null; candles = new Map(); curSignal = null; pullCandles(1500); });
+let wakeLock = null;
+$('wake').addEventListener('click', async ()=>{
+  const b = $('wake');
+  try{
+    if(wakeLock){ await wakeLock.release(); wakeLock = null; b.textContent = 'Manter tela ligada'; return; }
+    wakeLock = await navigator.wakeLock.request('screen'); b.textContent = 'Tela fica ligada ✓';
+    wakeLock.addEventListener('release', ()=>{ wakeLock = null; b.textContent = 'Manter tela ligada'; });
+  }catch(e){ b.textContent = 'Seu navegador não deixou'; }
+});
+window.addEventListener('resize', ()=>drawSpark());
+
+/* ============ início ============ */
+(function init(){
+  const st = MODEL.stats;
+  $('btPeriod').textContent = `${MODEL.period[0]} a ${MODEL.period[1]}, ${MODEL.n_test.toLocaleString('pt-BR')} janelas`;
+  $('btForte').textContent = st.forte.acc+'%'; $('btFraco').textContent = st.fraco.acc+'%'; $('btAll').textContent = st.todas.acc+'%';
+  const r = store.get('previsor_range', 'live'); const rb = document.querySelector(`.ranges [data-range="${r}"]`); if(rb) rb.click();
+  const a = store.get('previsor_amt', null); if(a) $('amount').value = a;
+  $('initBal').value = wallet.initial;
+  renderWallet();
+  openCoinbase(); openBinance();
+  pullCandles(1500);
+  setInterval(()=>{ for(const f of Object.keys(feeds)) if(Date.now()-feeds[f].lastMsg > 5000) pollTicker(f); }, 1000);
+  setInterval(()=>{ if(Date.now()-candleWs > 10000 || Date.now()-lastCandleOk > 20000) pullCandles(10); resolveModelLog(); resolveBets(); }, 2500);
+  setInterval(sample, 250);
+  setInterval(renderLive, 250);
+  setInterval(()=>{ if(!document.querySelector('[data-panel="modelo"]').hidden) renderModel(); }, 5000);
+  requestAnimationFrame(drawChart);
 })();
 </script>
 </body>
