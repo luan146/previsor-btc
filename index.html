@@ -35,6 +35,8 @@ h1{font-size:20px;margin:0;font-weight:650}
 .tag.fraco{background:rgba(242,184,75,.15);color:var(--warn)}
 .tag.coroa{background:rgba(138,147,166,.15);color:var(--neutral)}
 .signal.faded .big{opacity:.45}
+.bet{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 10px;align-items:center;margin-bottom:10px}
+.bet input,.bet select{width:100%;max-width:160px}
 .nowbox{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}
 .nowhead{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
 .nowhead b{color:var(--text)}
@@ -145,9 +147,14 @@ label{font-size:13px;color:var(--muted)}
 
     <div class="card">
       <h2>Comparar com a Phantom</h2>
-      <div class="controls">
-        <label for="pay">Preço do <b style="color:var(--up)">UP</b> na Phantom agora (¢):</label>
-        <input id="pay" type="number" inputmode="numeric" min="1" max="99" value="50" style="width:80px">
+      <div class="note" style="margin-bottom:8px">Copie do app os valores do lado que você quer apostar.</div>
+      <div class="bet">
+        <label for="side">Lado</label>
+        <select id="side"><option value="UP">▲ UP</option><option value="DOWN">▼ DOWN</option></select>
+        <label for="stake">Você aposta (US$)</label>
+        <input id="stake" type="number" inputmode="decimal" min="1" step="0.01" value="1.00">
+        <label for="payout">Recebe se acertar (US$)</label>
+        <input id="payout" type="number" inputmode="decimal" min="1" step="0.01" value="2.00">
       </div>
       <div class="warn" id="be"></div>
       <div class="note" style="margin-top:10px" id="bt"></div>
@@ -166,7 +173,7 @@ label{font-size:13px;color:var(--muted)}
     <div class="card full note">
       <b style="color:var(--text)">Como usar:</b> deixe esta página aberta. No começo de cada janela (:00, :05, :10…) o sinal é calculado com os candles de 1 minuto que já fecharam.
       O sinal grande é o de abertura: <b>FORTE</b> é o único que teve vantagem mais clara no teste; <b>fraco</b> é arriscado; <b>cara ou coroa</b> é melhor pular.
-      A <b>chance agora</b> muda durante a janela conforme o preço anda. Ela passa fácil de 70%, mas a Phantom também sobe o preço do lado que está ganhando. Só vale entrar quando a chance for maior que o preço em ¢: digite o preço do UP no quadro "Comparar com a Phantom".
+      A <b>chance agora</b> muda durante a janela conforme o preço anda. Ela passa fácil de 70%, mas a Phantom também sobe o preço do lado que está ganhando. Só vale entrar quando a chance for maior que o necessário: coloque quanto aposta e quanto recebe no quadro "Comparar com a Phantom".
       O preço aqui vem de uma corretora (só leitura, sem conta), e a Phantom resolve pelo preço da Chainlink, então em janelas onde o preço quase não se mexe o resultado pode divergir.
       Rode pelo menos 1–2 semanas só olhando o placar antes de colocar dinheiro. Isto não é recomendação financeira.
     </div>
@@ -436,19 +443,25 @@ function renderNow(S, last){
   txt.innerHTML = `<span style="color:${lead==='UP'?'var(--up)':'var(--down)'}">${lead} ${Math.round(c*100)}%</span>`;
   bar.style.width = (nowP*100).toFixed(1)+'%';
 }
+const usd = v => 'US$ '+v.toFixed(2).replace('.',',');
 function renderBE(){
-  const pay = Math.min(99, Math.max(1, +document.getElementById('pay').value||50));
+  const side = document.getElementById('side').value;
+  const stake = Math.max(0.01, +document.getElementById('stake').value || 1);
+  const payout = Math.max(stake, +document.getElementById('payout').value || 2);
+  const need = stake/payout;                       // % mínimo de acerto pra empatar
   const st = MODEL.stats, el = document.getElementById('be');
-  if(nowP==null){
-    el.innerHTML = `Quando a janela começar, compare aqui a chance do modelo com o preço da Phantom. Pagando <b>${pay}¢</b>, você precisa acertar mais de <b>${pay}%</b> das vezes (um pouco mais por causa das taxas).`;
-  } else {
-    const cu = Math.round(nowP*100), cd = 100-cu, pd = 100-pay; // DOWN custa ~100 − UP
-    const eu = cu - pay, ed = cd - pd, MIN = 5;
+  const color = side==='UP' ? 'var(--up)' : 'var(--down)';
+  const head = `Apostando <b>${usd(stake)}</b> pra receber <b>${usd(payout)}</b> (lucro de ${usd(payout-stake)}), você precisa acertar mais de <b>${(need*100).toFixed(0)}%</b> das vezes pra não perder dinheiro.`;
+  if(nowP==null){ el.innerHTML = head + ' Quando a janela começar, aparece aqui se vale a pena.'; }
+  else {
+    const chance = side==='UP' ? nowP : 1-nowP;
+    const ev = chance*payout - stake;               // ganho médio por aposta
+    const edge = (chance - need)*100, MIN = 5;
     let verdict;
-    if(eu >= MIN) verdict = `<b style="color:var(--up)">UP está barato</b>: chance ${cu}% contra preço ${pay}¢ (vantagem de ${eu} pontos).`;
-    else if(ed >= MIN) verdict = `<b style="color:var(--down)">DOWN está barato</b>: chance ${cd}% contra preço ~${pd}¢ (vantagem de ${ed} pontos).`;
-    else verdict = `<b>Preço justo, não entre.</b> UP: chance ${cu}% × ${pay}¢ · DOWN: chance ${cd}% × ~${pd}¢. Precisa de uns ${MIN} pontos de folga pra cobrir taxa e erro.`;
-    el.innerHTML = verdict + ' <span class="note">Atualize o preço sempre que ele mudar na Phantom.</span>';
+    if(edge >= MIN) verdict = `<b style="color:${color}">${side} vale a pena</b>: chance ${(chance*100).toFixed(0)}% contra ${(need*100).toFixed(0)}% necessários. Ganho médio de ${usd(ev)} por aposta, a longo prazo.`;
+    else if(edge > 0) verdict = `<b>No limite.</b> ${side} tem chance ${(chance*100).toFixed(0)}% e precisa de ${(need*100).toFixed(0)}%. A folga é pequena demais pra cobrir taxa e erro do modelo.`;
+    else verdict = `<b>Não vale.</b> ${side} tem chance ${(chance*100).toFixed(0)}% e precisa de ${(need*100).toFixed(0)}%. Perda média de ${usd(-ev)} por aposta.`;
+    el.innerHTML = head + '<br>' + verdict + ' <span class="note">Atualize os valores quando mudarem no app.</span>';
   }
   document.getElementById('bt').innerHTML =
     `<b>No teste com dados reais</b> (jan/2025–set/2026): sinal de abertura FORTE acertou ${st.forte.acc}% (~${st.forte.per_day} por dia), fraco ${st.fraco.acc}%, todas ${st.todas.acc}%. ` +
@@ -488,9 +501,11 @@ document.getElementById('wake').addEventListener('click', async ()=>{
     wakeLock.addEventListener('release', ()=>{ wakeLock=null; b.textContent='Manter tela ligada'; });
   }catch(e){ b.textContent='Seu navegador não deixou'; }
 });
-document.getElementById('pay').addEventListener('input', renderBE);
-try{ const v=localStorage.getItem('previsor_pay'); if(v) document.getElementById('pay').value=v; }catch(e){}
-document.getElementById('pay').addEventListener('change', e=>{ try{ localStorage.setItem('previsor_pay', e.target.value); }catch(err){} });
+['side','stake','payout'].forEach(id=>{
+  const el=document.getElementById(id);
+  try{ const v=localStorage.getItem('previsor_'+id); if(v) el.value=v; }catch(e){}
+  el.addEventListener('input', renderBE); el.addEventListener('change', ()=>{ try{ localStorage.setItem('previsor_'+id, el.value); }catch(err){} renderBE(); });
+});
 document.getElementById('csv').addEventListener('click', ()=>{
   const head='janela,sinal,prob_up,confianca,forca,preco_inicio,preco_fim,resultado,fonte\n';
   const body=logRows.map(r=>[new Date(r.S*1000).toISOString(),r.dir,r.p,r.conf,r.tier,r.startPx,r.endPx??'',r.res??'',r.src??''].join(',')).join('\n');
