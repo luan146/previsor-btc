@@ -60,7 +60,11 @@ button{cursor:pointer}
 .price{font:700 clamp(34px,9vw,46px)/1.05 var(--f-display);letter-spacing:-.01em;margin-top:12px;font-variant-numeric:tabular-nums}
 .vs{margin-top:4px;font-size:14px;font-weight:600;color:var(--muted)}
 .vs.up{color:var(--up)} .vs.down{color:var(--down)}
-.srcline{font-size:12px;color:var(--faint);margin-top:2px}
+.srcline{font-size:12px;color:var(--faint);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font:600 12px var(--f-body);text-decoration:underline;text-underline-offset:3px}
+.calib{margin-top:10px;padding:12px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--line);display:grid;gap:8px}
+.calib label{font-size:12px;color:var(--muted);font-weight:600}
+.calrow{display:flex;gap:8px}.calrow .inp{flex:1}
 .srcline b{color:var(--muted);font-weight:600}
 .update{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:9;border:0;border-radius:14px;padding:14px;background:var(--accent);color:var(--accent-ink);font:700 15px var(--f-display);box-shadow:0 8px 30px rgba(0,0,0,.5)}
 .progress{height:3px;background:var(--surface-3);border-radius:3px;margin-top:14px;overflow:hidden}
@@ -177,7 +181,16 @@ select.sel{background:var(--surface-2);border:1px solid var(--line);border-radiu
         </div>
         <div class="price" id="price">$—</div>
         <div class="vs" id="vs">aguardando o preço a bater</div>
-        <div class="srcline" id="srcline"></div>
+        <div class="srcline"><span id="srcline"></span> <button class="linkbtn" id="calBtn">Igualar ao app</button></div>
+        <div class="calib" id="calib" hidden>
+          <label for="calIn">Preço a bater que a Phantom mostra agora (a linha tracejada)</label>
+          <div class="calrow">
+            <div class="inp"><span>$</span><input id="calIn" inputmode="decimal" placeholder="ex: 84014.15"></div>
+            <button class="btn" id="calSave">Salvar</button>
+          </div>
+          <div class="hint">A página passa a somar a diferença em todos os preços. Não muda a chance nem quem ganha. Refaça se a diferença mudar.</div>
+          <button class="linkbtn" id="calClear">Remover ajuste</button>
+        </div>
         <div class="progress"><i id="prog"></i></div>
         <div class="chart-box"><canvas id="chart" aria-label="Gráfico do preço do BTC"></canvas></div>
         <div class="ranges" role="group" aria-label="Período do gráfico">
@@ -274,7 +287,7 @@ select.sel{background:var(--surface-2);border:1px solid var(--line);border-radiu
         <div class="panel prose" data-panel="sobre" hidden>
           <p><b>Como usar.</b> No começo de cada janela (:00, :05, :10…) sai o <b>sinal de abertura</b>. Durante a janela, a <b>chance agora</b> muda com o preço. Na Phantom, veja o multiplicador do lado que você quer, digite aqui e a página diz se vale a pena: só vale quando a chance do modelo é maior que 1 ÷ multiplicador.</p>
           <p><b>Teste com dados reais</b> (<span id="btPeriod"></span>): sinal de abertura FORTE acertou <b id="btForte"></b>, fraco <b id="btFraco"></b>, todas <b id="btAll"></b>. Seguindo quem está ganhando: 1 min depois do início 66%, 2 min 74%, 3 min 80%, 4 min 88%. A Phantom também sobe o preço de quem está ganhando.</p>
-          <p><b>Preço.</b> A Phantom decide pelo oráculo da Chainlink, que junta o preço de várias corretoras. Aqui a fonte principal é o oráculo Pyth, que funciona do mesmo jeito e costuma ficar a poucos dólares dele. Coinbase e Binance sozinhas ficam dezenas de dólares acima ou abaixo (a Binance ainda cota em USDT, não em dólar), então só entram de reserva. Em janelas muito apertadas, o resultado daqui ainda pode sair diferente do app.</p>
+          <p><b>Preço.</b> A Phantom decide pelo oráculo da Chainlink, que é pago e só liberado pra empresas. Aqui o preço vem da Coinbase e da Binance, que costumam ficar uns $30 acima. Use <b>Igualar ao app</b> pra descontar essa diferença: ela muda devagar, então basta refazer de vez em quando. A diferença não muda quem ganha, a não ser em janelas decididas por poucos dólares.</p>
           <div class="field"><label for="src">Fonte dos candles do modelo</label>
             <select class="sel" id="src"><option value="auto">Automática</option><option value="binance">Binance</option><option value="coinbase">Coinbase</option><option value="kraken">Kraken</option></select></div>
           <div class="row-actions"><button class="btn" id="wake">Manter tela ligada</button></div>
@@ -287,7 +300,7 @@ select.sel{background:var(--surface-2);border:1px solid var(--line);border-radiu
 
 <script>
 const MODEL = {"features": ["ret1", "ret3", "ret5", "ret15", "ret30", "ret60", "ret240", "vol15", "vol60", "volratio", "rsi", "dist_ema20", "dist_ema100", "vz", "pos60"], "mu": [1.2857e-06, 2.1064e-06, -1.1817e-06, -3.295e-06, -6.7006e-06, -1.35273e-05, -5.55332e-05, 0.0004913382, 0.0005118294, 0.9616721294, 50.0845540278, -1.7547e-06, -1.48252e-05, -0.279680313, 0.5059436861], "sd": [0.000575569, 0.001040291, 0.0013845411, 0.0023851796, 0.0033580009, 0.0047123616, 0.0093546678, 0.0003770624, 0.0003484473, 0.2827329681, 12.5038773908, 0.0012898071, 0.0030005783, 0.8036348156, 0.3099550993], "coef": [0.0004137, -0.02190815, 0.04975664, 0.02707659, 0.01556511, 0.01299143, 0.00306932, 0.00301814, -0.006769, -0.0026882, -0.01845959, -0.08489684, -0.04342224, -0.00202028, -0.00945107], "intercept": -0.003987778906587021, "stats": {"todas": {"acc": 51.2, "pct": 100.0, "per_day": 285.6}, "fraco": {"acc": 53.4, "pct": 13.3, "per_day": 37.9}, "forte": {"acc": 55.5, "pct": 3.2, "per_day": 9.0}}, "period": ["2025-04-01", "2026-09-29"], "n_test": 155916};
-const VERSION = '3.2';
+const VERSION = '3.3';
 async function checkVersion(){
   try{
     const r = await fetch('version.json?t='+Date.now(), {cache:'no-store'}); if(!r.ok) return;
@@ -328,7 +341,7 @@ async function getJSON(url){
 // Pyth: oráculo que junta dezenas de corretoras, como a Chainlink que a Phantom usa. É a fonte principal.
 const PYTH_ID = 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
 const PYTH = 'https://hermes.pyth.network';
-const feeds = { pyth:{name:'Oráculo Pyth', last:null, ws:null, lastMsg:0}, coinbase:{name:'Coinbase', last:null, ws:null, lastMsg:0}, binance:{name:'Binance', last:null, ws:null, lastMsg:0} };
+const feeds = { coinbase:{name:'Coinbase', last:null, ws:null, lastMsg:0}, binance:{name:'Binance', last:null, ws:null, lastMsg:0} };
 const pythPx = u => { const q = u.price; return +q.price * Math.pow(10, q.expo); };
 function openPyth(){
   if(feeds.pyth.ws || typeof EventSource==='undefined') return;
@@ -408,6 +421,8 @@ const liveFeeds = () => Object.keys(feeds).filter(f => feeds[f].last && Date.now
 // Com o Pyth: preço a bater e preço atual vêm só do oráculo (mesma régua da Phantom).
 // Sem o Pyth: média da Coinbase e Binance, cada uma comparada com o próprio preço de início.
 const OTHERS = ['coinbase','binance'];
+const OFF_KEY = 'previsor_offset_v1';
+const offV = () => { const o = store.get(OFF_KEY, null); return o ? o.v : 0; };
 function windowState(S){
   const b = boundary[S] || {}, live = liveFeeds();
   if(b.pyth!=null){
@@ -729,7 +744,8 @@ function drawChart(ts){
   if(cv.width !== Math.round(W*dpr) || cv.height !== Math.round(H*dpr)){ cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); }
   const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
   const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
-  const {pts, x0, x1, beat} = seriesFor(range);
+  let {pts, x0, x1, beat} = seriesFor(range);
+  const o = offV(); if(o){ pts = pts.map(x=>({t:x.t, p:x.p+o})); if(beat!=null) beat += o; }
   const L = 6, R = W - 84, T = 14, B = H - 22;
   if(!pts.length){ g.fillStyle = col('--faint'); g.font = '13px Manrope, sans-serif'; g.fillText('Conectando ao preço ao vivo…', L+8, H/2); requestAnimationFrame(drawChart); return; }
   // ponta suave: o último ponto desliza até o preço mais recente
@@ -796,14 +812,17 @@ function renderLive(){
   const st = windowState(S);
   if(t - S > 3) for(const f of liveFeeds()) if(!(boundary[S]||{})[f]) fetchBoundary(f, S);
   const cur = st && st.cur!=null ? st.cur : (liveFeeds().length ? liveFeeds().reduce((a,f)=>a+feeds[f].last.p,0)/liveFeeds().length : null);
-  $('price').textContent = pxFmt(shown!=null && range==='live' ? shown : cur);
+  const o = offV();
+  $('price').textContent = pxFmt(shown!=null && range==='live' ? shown : (cur!=null ? cur+o : null));
   const vs = $('vs');
   if(st && st.cur!=null){
     const d = st.cur - st.beat, pct = d/st.beat*100;
     vs.className = 'vs ' + (d>=0?'up':'down');
-    vs.textContent = `${d>=0?'+':''}${pct.toFixed(3)}% (${d>=0?'+':'-'}$${Math.abs(d).toFixed(2)}) ${d>=0?'acima':'abaixo'} do preço a bater ${pxFmt(st.beat)}`;
+    vs.textContent = `${d>=0?'+':''}${pct.toFixed(3)}% (${d>=0?'+':'-'}$${Math.abs(d).toFixed(2)}) ${d>=0?'acima':'abaixo'} do preço a bater ${pxFmt(st.beat+o)}`;
   } else { vs.className='vs'; vs.textContent = 'aguardando o preço a bater desta janela'; }
-  $('srcline').innerHTML = !st ? '' : st.src==='pyth' ? 'Fonte: <b>oráculo Pyth</b> (parecido com a Chainlink da Phantom)' : st.src==='mix' ? 'Fonte: <b>oráculo Pyth</b> + corretoras (Pyth oscilando)' : 'Fonte: <b>Coinbase + Binance</b> (Pyth não conectou; pode ficar ~$30 acima do app)';
+  const off = store.get(OFF_KEY, null);
+  $('srcline').innerHTML = off ? `Coinbase + Binance · ajustado <b>${off.v>=0?'+':'-'}$${Math.abs(off.v).toFixed(2)}</b> pra bater com a Phantom (${hm(off.at)})` : 'Coinbase + Binance · sem ajuste, pode ficar ~$30 acima da Phantom';
+  $('calBtn').textContent = off ? 'Refazer ajuste' : 'Igualar ao app';
   lastChance = st && st.cur!=null ? chanceUp(S, st.beat, st.cur, curSignal) : null;
   $('pUp').textContent = lastChance==null ? '—' : Math.round(lastChance*100)+'%';
   $('pDn').textContent = lastChance==null ? '—' : Math.round((1-lastChance)*100)+'%';
@@ -849,6 +868,19 @@ document.querySelectorAll('[data-amt]').forEach(b=>b.addEventListener('click',()
 $('amount').addEventListener('input', ()=>{ store.set('previsor_amt', $('amount').value); renderTicket(); });
 $('mult').addEventListener('input', renderTicket);
 $('betBtn').addEventListener('click', placeBet);
+$('calBtn').addEventListener('click', ()=>{ const c = $('calib'); c.hidden = !c.hidden; if(!c.hidden) $('calIn').focus(); });
+$('calSave').addEventListener('click', ()=>{
+  let raw = ($('calIn').value||'').replace(/[$\s]/g,'');
+  // aceita 84.014,15 · 84,014.15 · 84014.15 · 84014,15
+  if(raw.includes('.') && raw.includes(',')){ const dec = raw.lastIndexOf(',') > raw.lastIndexOf('.') ? ',' : '.'; raw = raw.split(dec==='.'?',':'.').join('').replace(dec,'.'); }
+  else if(raw.includes(',')) raw = /^\d{1,3}(,\d{3})+$/.test(raw) ? raw.replace(/,/g,'') : raw.replace(',','.');
+  else if(/^\d{1,3}(\.\d{3})+$/.test(raw)) raw = raw.replace(/\./g,'');
+  const v = parseFloat(raw);
+  const st = windowState(Math.floor(now()/WIN)*WIN);
+  if(!(v>1000) || !st){ $('calIn').setCustomValidity('x'); $('calIn').placeholder = st ? 'digite o preço, ex: 84014.15' : 'espere a janela carregar'; $('calIn').value=''; return; }
+  store.set(OFF_KEY, {v: +(v - st.beat).toFixed(2), at: Math.floor(now())}); $('calib').hidden = true; $('calIn').value = ''; shown = null;
+});
+$('calClear').addEventListener('click', ()=>{ try{ localStorage.removeItem(OFF_KEY); }catch(e){} $('calib').hidden = true; shown = null; });
 function showTab(name){
   document.querySelectorAll('[role=tab]').forEach(x=>x.setAttribute('aria-selected', x.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(p=>p.hidden = p.dataset.panel!==name);
@@ -894,7 +926,7 @@ window.addEventListener('resize', ()=>drawSpark());
   const a = store.get('previsor_amt', null); if(a) $('amount').value = a;
   $('initBal').value = wallet.initial;
   renderWallet();
-  openPyth(); openCoinbase(); openBinance();
+  openCoinbase(); openBinance();
   pullCandles(1500);
   setInterval(()=>{
     for(const f of Object.keys(feeds)){
