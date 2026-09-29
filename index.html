@@ -75,6 +75,15 @@ button{cursor:pointer}
 .ranges button{border:0;background:transparent;color:var(--muted);padding:7px 14px;border-radius:999px;font:600 13px var(--f-body);white-space:nowrap}
 .ranges button[aria-pressed="true"]{background:var(--text);color:var(--bg)}
 .ranges .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.feedbox{margin-top:10px;font-size:12px;color:var(--muted)}
+.feedbox summary{cursor:pointer;list-style:none}
+.feedbox summary::-webkit-details-marker{display:none}
+.feedbox summary::after{content:' ▾';color:var(--faint)}
+.feedbox[open] summary::after{content:' ▴'}
+.feedbox summary b{color:var(--text);font-family:var(--f-num);font-weight:500}
+.feedlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 12px;margin-top:8px}
+.feedlist b{color:var(--text);font-family:var(--f-num);font-weight:500}
+.feedlist em,.feedlist i{color:var(--faint);font-style:normal}
 .feeds{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--muted)}
 .feeds b{color:var(--text);font-family:var(--f-num);font-weight:500}
 
@@ -199,7 +208,8 @@ select.sel{background:var(--surface-2);border:1px solid var(--line);border-radiu
           <button data-range="1h" aria-pressed="false">1H</button>
           <button data-range="1d" aria-pressed="false">1D</button>
         </div>
-        <div class="feeds" id="feeds"></div>
+        <details class="feedbox" id="feedBox"><summary id="feedSum">Conectando às corretoras…</summary><div class="feedlist" id="feedList"></div></details>
+        <div class="feeds" id="feeds" hidden></div>
       </section>
 
       <section class="card" aria-label="Chance agora">
@@ -287,7 +297,7 @@ select.sel{background:var(--surface-2);border:1px solid var(--line);border-radiu
         <div class="panel prose" data-panel="sobre" hidden>
           <p><b>Como usar.</b> No começo de cada janela (:00, :05, :10…) sai o <b>sinal de abertura</b>. Durante a janela, a <b>chance agora</b> muda com o preço. Na Phantom, veja o multiplicador do lado que você quer, digite aqui e a página diz se vale a pena: só vale quando a chance do modelo é maior que 1 ÷ multiplicador.</p>
           <p><b>Teste com dados reais</b> (<span id="btPeriod"></span>): sinal de abertura FORTE acertou <b id="btForte"></b>, fraco <b id="btFraco"></b>, todas <b id="btAll"></b>. Seguindo quem está ganhando: 1 min depois do início 66%, 2 min 74%, 3 min 80%, 4 min 88%. A Phantom também sobe o preço de quem está ganhando.</p>
-          <p><b>Preço.</b> A Phantom decide pelo oráculo da Chainlink, que é pago e só liberado pra empresas. Aqui o preço vem da Coinbase e da Binance, que costumam ficar uns $30 acima. Use <b>Igualar ao app</b> pra descontar essa diferença: ela muda devagar, então basta refazer de vez em quando. A diferença não muda quem ganha, a não ser em janelas decididas por poucos dólares.</p>
+          <p><b>Preço.</b> A Phantom decide pelo oráculo da Chainlink, que é pago e só liberado pra empresas. Aqui o preço é um índice próprio feito do mesmo jeito: 7 corretoras ao vivo (Coinbase, Kraken, Bitstamp, Gemini, Binance, OKX e Bybit), com os pares em USDT convertidos pra dólar, tirando a mais alta e a mais baixa e fazendo a média do resto. Ainda pode sobrar uma diferença fixa pra Chainlink. Use <b>Igualar ao app</b> pra descontar essa diferença: ela muda devagar, então basta refazer de vez em quando. A diferença não muda quem ganha, a não ser em janelas decididas por poucos dólares.</p>
           <div class="field"><label for="src">Fonte dos candles do modelo</label>
             <select class="sel" id="src"><option value="auto">Automática</option><option value="binance">Binance</option><option value="coinbase">Coinbase</option><option value="kraken">Kraken</option></select></div>
           <div class="row-actions"><button class="btn" id="wake">Manter tela ligada</button></div>
@@ -300,7 +310,7 @@ select.sel{background:var(--surface-2);border:1px solid var(--line);border-radiu
 
 <script>
 const MODEL = {"features": ["ret1", "ret3", "ret5", "ret15", "ret30", "ret60", "ret240", "vol15", "vol60", "volratio", "rsi", "dist_ema20", "dist_ema100", "vz", "pos60"], "mu": [1.2857e-06, 2.1064e-06, -1.1817e-06, -3.295e-06, -6.7006e-06, -1.35273e-05, -5.55332e-05, 0.0004913382, 0.0005118294, 0.9616721294, 50.0845540278, -1.7547e-06, -1.48252e-05, -0.279680313, 0.5059436861], "sd": [0.000575569, 0.001040291, 0.0013845411, 0.0023851796, 0.0033580009, 0.0047123616, 0.0093546678, 0.0003770624, 0.0003484473, 0.2827329681, 12.5038773908, 0.0012898071, 0.0030005783, 0.8036348156, 0.3099550993], "coef": [0.0004137, -0.02190815, 0.04975664, 0.02707659, 0.01556511, 0.01299143, 0.00306932, 0.00301814, -0.006769, -0.0026882, -0.01845959, -0.08489684, -0.04342224, -0.00202028, -0.00945107], "intercept": -0.003987778906587021, "stats": {"todas": {"acc": 51.2, "pct": 100.0, "per_day": 285.6}, "fraco": {"acc": 53.4, "pct": 13.3, "per_day": 37.9}, "forte": {"acc": 55.5, "pct": 3.2, "per_day": 9.0}}, "period": ["2025-04-01", "2026-09-29"], "n_test": 155916};
-const VERSION = '3.3';
+const VERSION = '3.4';
 async function checkVersion(){
   try{
     const r = await fetch('version.json?t='+Date.now(), {cache:'no-store'}); if(!r.ok) return;
@@ -336,116 +346,135 @@ async function getJSON(url){
   finally{ clearTimeout(id); }
 }
 
-/* ============ preço ao vivo por negócio (Coinbase + Binance) ============ */
-// cada fonte guarda o último negócio e o preço em cada virada de 5 min (fronteira)
-// Pyth: oráculo que junta dezenas de corretoras, como a Chainlink que a Phantom usa. É a fonte principal.
-const PYTH_ID = 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
-const PYTH = 'https://hermes.pyth.network';
-const feeds = { coinbase:{name:'Coinbase', last:null, ws:null, lastMsg:0}, binance:{name:'Binance', last:null, ws:null, lastMsg:0} };
-const pythPx = u => { const q = u.price; return +q.price * Math.pow(10, q.expo); };
-function openPyth(){
-  if(feeds.pyth.ws || typeof EventSource==='undefined') return;
-  let es; try{ es = new EventSource(`${PYTH}/v2/updates/price/stream?ids[]=${PYTH_ID}&parsed=true`); }catch(e){ return; }
-  feeds.pyth.ws = es;
-  es.onmessage = ev=>{ try{ const u = JSON.parse(ev.data).parsed[0]; onTick('pyth', pythPx(u), u.price.publish_time); }catch(e){} };
-  es.onerror = ()=>{ if(es.readyState===2){ feeds.pyth.ws = null; setTimeout(openPyth, 3000); } };
+/* ============ índice próprio: 7 corretoras ao vivo ============ */
+// Cada corretora manda o melhor preço de compra/venda (ou negócio) várias vezes por segundo.
+// Pares em USDT viram dólar pela cotação ao vivo do USDT. O índice tira a mais alta e a mais baixa e faz a média do resto.
+const FEEDS = {
+  coinbase:{name:'Coinbase', q:'USD'}, kraken:{name:'Kraken', q:'USD'}, bitstamp:{name:'Bitstamp', q:'USD', slow:true}, gemini:{name:'Gemini', q:'USD'},
+  binance:{name:'Binance', q:'USDT'}, okx:{name:'OKX', q:'USDT'}, bybit:{name:'Bybit', q:'USDT'}
+};
+const feeds = {}; for(const k in FEEDS) feeds[k] = {...FEEDS[k], last:null, raw:null, ws:null, lastMsg:0, hits:[], urlIdx:0};
+const usdt = {kraken:null, coinbase:null};
+function usdtRate(){
+  const v = Object.values(usdt).filter(x=>x && x>0.97 && x<1.03);
+  return v.length ? v.reduce((a,b)=>a+b,0)/v.length : 1;
 }
-const boundary = {}; // boundary[t][fonte] = preço no instante t (múltiplo de 300)
+const boundary = {}; // boundary[t][fonte ou 'idx'] = preço no instante t (múltiplo de 300)
 function setBoundary(t, f, p){ (boundary[t] ||= {})[f] ??= p; }
-function onTick(f, p, t){
-  const fd = feeds[f]; if(!(p>0)) return;
-  if(t) syncClock(t); else t = now();
-  if(fd.last){
-    const wPrev = Math.floor(fd.last.t/WIN)*WIN, wNow = Math.floor(t/WIN)*WIN;
-    if(wNow > wPrev){ setBoundary(wNow, f, (t - fd.last.t) < 15 ? fd.last.p : p); }
-  }
-  fd.last = {p, t}; fd.lastMsg = Date.now();
-  (fd.hits ||= []).push(fd.lastMsg); while(fd.hits.length && fd.hits[0] < fd.lastMsg-5000) fd.hits.shift();
+const staleMs = f => feeds[f].slow ? 30000 : 12000;
+const liveFeeds = () => Object.keys(feeds).filter(f => feeds[f].last && Date.now()-feeds[f].lastMsg < staleMs(f));
+function onPx(f, raw, serverT){
+  const fd = feeds[f]; if(!(raw>0)) return;
+  if(serverT) syncClock(serverT);
+  const t = now(), p = fd.q==='USDT' ? raw*usdtRate() : raw;
+  if(fd.last){ const wPrev = Math.floor(fd.last.t/WIN)*WIN, wNow = Math.floor(t/WIN)*WIN; if(wNow > wPrev) setBoundary(wNow, f, (t-fd.last.t) < 15 ? fd.last.p : p); }
+  fd.raw = raw; fd.last = {p, t}; fd.lastMsg = Date.now();
+  fd.hits.push(fd.lastMsg); while(fd.hits.length && fd.hits[0] < fd.lastMsg-5000) fd.hits.shift();
+  scheduleIndex();
 }
-function openCoinbase(){
-  if(feeds.coinbase.ws) return;
-  let ws; try{ ws = new WebSocket('wss://ws-feed.exchange.coinbase.com'); }catch(e){ return; }
-  feeds.coinbase.ws = ws; ws.openedAt = Date.now();
-  ws.onopen = ()=>ws.send(JSON.stringify({type:'subscribe', product_ids:['BTC-USD'], channels:['ticker']}));
-  ws.onmessage = ev=>{ try{ const m = JSON.parse(ev.data); if(m.type==='ticker' && m.price) onTick('coinbase', +m.price, m.time ? Date.parse(m.time)/1000 : null); }catch(e){} };
-  ws.onclose = ()=>{ feeds.coinbase.ws = null; setTimeout(openCoinbase, 3000); };
+// índice (média aparada), recalculado no máximo a cada 100 ms
+let idx = null, idxTimer = null;
+function scheduleIndex(){ if(!idxTimer) idxTimer = setTimeout(()=>{ idxTimer = null; computeIndex(); }, 100); }
+function computeIndex(){
+  const lf = liveFeeds(); if(!lf.length){ idx = null; return; }
+  const r = usdtRate();
+  let v = lf.map(f => feeds[f].q==='USDT' ? feeds[f].raw*r : feeds[f].raw).sort((a,b)=>a-b);
+  const med = v.length%2 ? v[(v.length-1)/2] : (v[v.length/2-1]+v[v.length/2])/2;
+  v = v.filter(x => Math.abs(x-med)/med < 0.002);            // descarta fonte travada ou muito fora
+  if(v.length >= 5) v = v.slice(1, -1);                        // tira a mais alta e a mais baixa
+  const p = v.reduce((a,b)=>a+b,0)/v.length, t = now();
+  if(idx){ const wPrev = Math.floor(idx.t/WIN)*WIN, wNow = Math.floor(t/WIN)*WIN; if(wNow > wPrev) setBoundary(wNow, 'idx', (t-idx.t) < 5 ? idx.p : p); }
+  idx = {p, t, n: lf.length, lastMsg: Date.now()};
+}
+const idxLive = () => idx && Date.now()-idx.lastMsg < 5000 && idx.n > 0;
+
+// conexão genérica com reconexão, troca de endereço e ping
+function connect(f, urls, onOpen, onMsg, ping){
+  const fd = feeds[f]; if(fd.ws) return;
+  let ws; try{ ws = new WebSocket(urls[fd.urlIdx % urls.length]); }catch(e){ fd.urlIdx++; setTimeout(()=>connect(f,urls,onOpen,onMsg,ping), 5000); return; }
+  fd.ws = ws; ws.openedAt = Date.now(); let pinger = null;
+  ws.onopen = ()=>{ try{ onOpen && onOpen(ws); }catch(e){} if(ping) pinger = setInterval(()=>{ try{ ws.send(ping); }catch(e){} }, 20000); };
+  ws.onmessage = ev=>{ if(typeof ev.data!=='string' || ev.data==='pong') return; try{ onMsg(JSON.parse(ev.data), ws); }catch(e){} };
+  ws.onclose = ()=>{ clearInterval(pinger); fd.ws = null; fd.urlIdx++; setTimeout(()=>connect(f,urls,onOpen,onMsg,ping), 3000); };
   ws.onerror = ()=>{ try{ ws.close(); }catch(e){} };
 }
-let binIdx = 0;
-function openBinance(){
-  if(feeds.binance.ws) return;
-  const hosts = ['wss://stream.binance.com:443','wss://data-stream.binance.vision','wss://stream.binance.com:9443'];
-  let ws; try{ ws = new WebSocket(hosts[binIdx % hosts.length] + '/stream?streams=btcusdt@aggTrade/btcusdt@kline_1m'); }catch(e){ return; }
-  feeds.binance.ws = ws; ws.openedAt = Date.now();
-  ws.onmessage = ev=>{
-    try{
-      const {stream, data} = JSON.parse(ev.data);
-      if(stream.endsWith('aggTrade')) onTick('binance', +data.p, data.T/1000);
-      else if(data.k && activeSource==='binance'){
-        const k = data.k; candles.set(k.t/1000, {t:k.t/1000,o:+k.o,h:+k.h,l:+k.l,c:+k.c,v:+k.v});
-        candleWs = Date.now(); lastCandleOk = Date.now();
-      }
-    }catch(e){}
-  };
-  ws.onclose = ()=>{ feeds.binance.ws = null; binIdx++; setTimeout(openBinance, 3000); };
-  ws.onerror = ()=>{ try{ ws.close(); }catch(e){} };
+const mid = (b,a) => (b>0 && a>0) ? (b+a)/2 : (b||a);
+function openFeeds(){
+  connect('coinbase', ['wss://ws-feed.exchange.coinbase.com'],
+    ws=>ws.send(JSON.stringify({type:'subscribe', product_ids:['BTC-USD','USDT-USD'], channels:['ticker']})),
+    m=>{ if(m.type!=='ticker') return; const st = m.time ? Date.parse(m.time)/1000 : null;
+      if(m.product_id==='USDT-USD') usdt.coinbase = +m.price;
+      else if(m.product_id==='BTC-USD') onPx('coinbase', mid(+m.best_bid, +m.best_ask) || +m.price, st); });
+  connect('kraken', ['wss://ws.kraken.com/v2'],
+    ws=>ws.send(JSON.stringify({method:'subscribe', params:{channel:'ticker', symbol:['BTC/USD','USDT/USD'], event_trigger:'bbo'}})),
+    m=>{ if(m.channel!=='ticker' || !m.data) return; m.data.forEach(d=>{ const p = mid(+d.bid, +d.ask) || +d.last; if(d.symbol==='USDT/USD') usdt.kraken = p; else if(d.symbol==='BTC/USD') onPx('kraken', p); }); });
+  connect('bitstamp', ['wss://ws.bitstamp.net'],
+    ws=>ws.send(JSON.stringify({event:'bts:subscribe', data:{channel:'live_trades_btcusd'}})),
+    (m,ws)=>{ if(m.event==='bts:request_reconnect'){ ws.close(); return; } if(m.event==='trade' && m.data) onPx('bitstamp', +m.data.price, +m.data.timestamp); });
+  const gb = {b:0, a:0};
+  connect('gemini', ['wss://api.gemini.com/v1/marketdata/BTCUSD?top_of_book=true&trades=false&heartbeat=true'], null,
+    m=>{ if(m.type!=='update' || !m.events) return; m.events.forEach(e=>{ if(e.type==='change'){ if(e.side==='bid') gb.b = +e.price; else gb.a = +e.price; } }); if(gb.b && gb.a) onPx('gemini', mid(gb.b, gb.a), m.timestampms ? m.timestampms/1000 : null); });
+  connect('binance', ['wss://stream.binance.com:443/stream?streams=btcusdt@bookTicker/btcusdt@kline_1m','wss://data-stream.binance.vision/stream?streams=btcusdt@bookTicker/btcusdt@kline_1m','wss://stream.binance.com:9443/stream?streams=btcusdt@bookTicker/btcusdt@kline_1m'], null,
+    ({stream, data})=>{
+      if(stream.endsWith('bookTicker')) onPx('binance', mid(+data.b, +data.a));
+      else if(data.k){ if(data.E) syncClock(data.E/1000); if(activeSource==='binance'){ const k = data.k; candles.set(k.t/1000, {t:k.t/1000,o:+k.o,h:+k.h,l:+k.l,c:+k.c,v:+k.v}); candleWs = Date.now(); lastCandleOk = Date.now(); } }
+    });
+  connect('okx', ['wss://ws.okx.com:8443/ws/v5/public','wss://wsaws.okx.com:8443/ws/v5/public'],
+    ws=>ws.send(JSON.stringify({op:'subscribe', args:[{channel:'tickers', instId:'BTC-USDT'}]})),
+    m=>{ const d = m.data && m.data[0]; if(d) onPx('okx', mid(+d.bidPx, +d.askPx) || +d.last); }, 'ping');
+  const bb = {b:0, a:0};
+  connect('bybit', ['wss://stream.bybit.com/v5/public/spot'],
+    ws=>ws.send(JSON.stringify({op:'subscribe', args:['orderbook.1.BTCUSDT']})),
+    m=>{ const d = m.data; if(!d || !m.topic) return; if(d.b && d.b[0]) bb.b = +d.b[0][0]; if(d.a && d.a[0]) bb.a = +d.a[0][0]; if(bb.b && bb.a) onPx('bybit', mid(bb.b, bb.a)); }, JSON.stringify({op:'ping'}));
 }
-// se o WebSocket não entregar nada, consulta o preço a cada segundo
+// reserva: se Coinbase ou Binance ficarem mudas, consulta o preço a cada segundo
 async function pollTicker(f){
   try{
-    if(f==='pyth'){ const d = await getJSON(`${PYTH}/v2/updates/price/latest?ids[]=${PYTH_ID}&parsed=true`); const u = d.parsed[0]; onTick('pyth', pythPx(u), u.price.publish_time); }
-    else if(f==='coinbase'){ const d = await getJSON('https://api.exchange.coinbase.com/products/BTC-USD/ticker'); onTick('coinbase', +d.price, d.time ? Date.parse(d.time)/1000 : null); }
-    else { let d; try{ d = await getJSON('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'); }catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT'); } onTick('binance', +d.price, null); }
+    if(f==='coinbase'){ const d = await getJSON('https://api.exchange.coinbase.com/products/BTC-USD/ticker'); onPx('coinbase', mid(+d.bid, +d.ask) || +d.price, d.time ? Date.parse(d.time)/1000 : null); }
+    else if(f==='binance'){ let d; try{ d = await getJSON('https://api.binance.com/api/v3/ticker/bookTicker?symbol=BTCUSDT'); }catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/ticker/bookTicker?symbol=BTCUSDT'); } onPx('binance', mid(+d.bidPrice, +d.askPrice)); }
   }catch(e){}
 }
-// preço exato numa virada (quando a página não estava aberta): abertura do candle de 1 min
+// preço de uma corretora numa virada (quando a página não estava aberta): abertura do candle de 1 min
 const bfPending = {};
 async function fetchBoundary(f, t){
   const key = f+t; if(bfPending[key] && Date.now()-bfPending[key] < 15000) return; bfPending[key] = Date.now();
   try{
-    if(f==='pyth'){
-      const d = await getJSON(`${PYTH}/v2/updates/price/${t}?ids[]=${PYTH_ID}&parsed=true`);
-      const u = d.parsed && d.parsed[0]; if(u && Math.abs(u.price.publish_time - t) <= 2) setBoundary(t, f, pythPx(u));
-    } else if(f==='coinbase'){
+    if(f==='coinbase'){
       const d = await getJSON(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=60&start=${new Date(t*1000).toISOString()}&end=${new Date((t+60)*1000).toISOString()}`);
       const k = d.find(x=>x[0]===t); if(k) setBoundary(t, f, +k[3]);
-    } else {
+    } else if(f==='binance'){
       const q = `?symbol=BTCUSDT&interval=1m&startTime=${t*1000}&limit=1`;
       let d; try{ d = await getJSON('https://api.binance.com/api/v3/klines'+q); }catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/klines'+q); }
-      if(d[0] && d[0][0]===t*1000) setBoundary(t, f, +d[0][1]);
+      if(d[0] && d[0][0]===t*1000) setBoundary(t, f, +d[0][1]*usdtRate());
     }
   }catch(e){}
 }
-const liveFeeds = () => Object.keys(feeds).filter(f => feeds[f].last && Date.now()-feeds[f].lastMsg < 15000);
-
-// Com o Pyth: preço a bater e preço atual vêm só do oráculo (mesma régua da Phantom).
-// Sem o Pyth: média da Coinbase e Binance, cada uma comparada com o próprio preço de início.
-const OTHERS = ['coinbase','binance'];
+const REST = ['coinbase','binance'];
 const OFF_KEY = 'previsor_offset_v1';
 const offV = () => { const o = store.get(OFF_KEY, null); return o ? o.v : 0; };
+
+// Janela atual. Preço a bater = índice na virada. Se a página abriu no meio,
+// estima: índice agora − quanto Coinbase/Binance andaram desde a virada (e fixa esse valor).
 function windowState(S){
-  const b = boundary[S] || {}, live = liveFeeds();
-  if(b.pyth!=null){
-    const beat = b.pyth;
-    if(live.includes('pyth')) return {beat, cur: feeds.pyth.last.p, src:'pyth'};
-    const lf = live.filter(f=>OTHERS.includes(f) && b[f]!=null);
-    if(!lf.length) return {beat, cur:null, src:'pyth'};
-    return {beat, cur: beat + lf.reduce((a,f)=>a+(feeds[f].last.p-b[f]),0)/lf.length, src:'mix'};
+  const b = boundary[S] || {};
+  if(b.idx==null && idxLive()){
+    const lf = REST.filter(f => b[f]!=null && liveFeeds().includes(f));
+    if(lf.length && now()-S > 2){ const d = lf.reduce((a,f)=>a+(feeds[f].last.p-b[f]),0)/lf.length; setBoundary(S, 'idx', idx.p - d); }
   }
-  const ws = OTHERS.filter(f=>b[f]!=null); if(!ws.length) return null;
-  const beat = ws.reduce((a,f)=>a+b[f],0)/ws.length;
-  const lf = live.filter(f=>ws.includes(f));
-  if(!lf.length) return {beat, cur:null, src:'corretoras'};
-  return {beat, cur: beat + lf.reduce((a,f)=>a+(feeds[f].last.p-b[f]),0)/lf.length, src:'corretoras'};
+  if(b.idx!=null){
+    if(idxLive()) return {beat:b.idx, cur:idx.p, src:'indice', n:idx.n};
+    return {beat:b.idx, cur:null, src:'indice', n:0};
+  }
+  return null;
 }
-// resultado de uma janela: preço na virada de início e de fim na mesma fonte (Pyth primeiro)
+// resultado: índice na virada de início e de fim; se faltar, usa Coinbase/Binance
 function windowResult(S){
   const a = boundary[S] || {}, z = boundary[S+WIN] || {};
-  if(a.pyth!=null && z.pyth!=null) return {beat:a.pyth, end:z.pyth, delta:z.pyth-a.pyth, src:'pyth'};
-  const both = OTHERS.filter(f => a[f]!=null && z[f]!=null);
+  if(a.idx!=null && z.idx!=null) return {beat:a.idx, end:z.idx, delta:z.idx-a.idx, src:'indice'};
+  const both = REST.filter(f => a[f]!=null && z[f]!=null);
   if(!both.length) return null;
-  const beat = both.reduce((s,f)=>s+a[f],0)/both.length;
   const delta = both.reduce((s,f)=>s+(z[f]-a[f]),0)/both.length;
+  const beat = a.idx!=null ? a.idx : both.reduce((s,f)=>s+a[f],0)/both.length;
   return {beat, end: beat+delta, delta, src:'corretoras'};
 }
 // começo da janela quando a página abre no meio: candles de 1 s da Binance, alinhados ao preço a bater
@@ -573,7 +602,7 @@ function resolveBets(){
     if(now() < b.S + WIN + 2) return;
     const r = windowResult(b.S);
     if(!r){
-      for(const f of Object.keys(feeds)){ if(!(boundary[b.S]||{})[f]) fetchBoundary(f, b.S); if(!(boundary[b.S+WIN]||{})[f]) fetchBoundary(f, b.S+WIN); }
+      for(const f of REST){ if(!(boundary[b.S]||{})[f]) fetchBoundary(f, b.S); if(!(boundary[b.S+WIN]||{})[f]) fetchBoundary(f, b.S+WIN); }
       if(now() > b.S + WIN + 6*3600){ b.status='cancelada'; b.payout=b.amount; wallet.balance += b.amount; ch = true; }
       return;
     }
@@ -691,11 +720,8 @@ function drawSpark(){
 let range = 'live';
 const tickSeries = []; // {t, p} amostrado a cada 250 ms (últimas ~1h10)
 function sample(){
-  const S = Math.floor(now()/WIN)*WIN, st = windowState(S);
-  let p = null;
-  if(st && st.cur!=null) p = st.cur;
-  else { const lf = liveFeeds(); if(lf.length) p = lf.reduce((a,f)=>a+feeds[f].last.p,0)/lf.length; }
-  if(p==null) return;
+  if(!idxLive()) return;
+  const p = idx.p;
   const last = tickSeries[tickSeries.length-1], t = now();
   // só guarda quando o preço muda (ou a cada 8 s): o gráfico liga os pontos em curva, sem degraus
   if(last && Math.abs(last.p - p) < 0.005 && t - last.t < 8) return;
@@ -810,8 +836,8 @@ function renderLive(){
   $('ring').style.strokeDashoffset = (40.84*(1-left/WIN)).toFixed(2);
   $('prog').style.width = ((1-left/WIN)*100).toFixed(1)+'%';
   const st = windowState(S);
-  if(t - S > 3) for(const f of liveFeeds()) if(!(boundary[S]||{})[f]) fetchBoundary(f, S);
-  const cur = st && st.cur!=null ? st.cur : (liveFeeds().length ? liveFeeds().reduce((a,f)=>a+feeds[f].last.p,0)/liveFeeds().length : null);
+  if(t - S > 3 && (boundary[S]||{}).idx==null) for(const f of REST) if(!(boundary[S]||{})[f]) fetchBoundary(f, S);
+  const cur = st && st.cur!=null ? st.cur : (idxLive() ? idx.p : null);
   const o = offV();
   $('price').textContent = pxFmt(shown!=null && range==='live' ? shown : (cur!=null ? cur+o : null));
   const vs = $('vs');
@@ -821,7 +847,8 @@ function renderLive(){
     vs.textContent = `${d>=0?'+':''}${pct.toFixed(3)}% (${d>=0?'+':'-'}$${Math.abs(d).toFixed(2)}) ${d>=0?'acima':'abaixo'} do preço a bater ${pxFmt(st.beat+o)}`;
   } else { vs.className='vs'; vs.textContent = 'aguardando o preço a bater desta janela'; }
   const off = store.get(OFF_KEY, null);
-  $('srcline').innerHTML = off ? `Coinbase + Binance · ajustado <b>${off.v>=0?'+':'-'}$${Math.abs(off.v).toFixed(2)}</b> pra bater com a Phantom (${hm(off.at)})` : 'Coinbase + Binance · sem ajuste, pode ficar ~$30 acima da Phantom';
+  const nLive = idx ? idx.n : 0;
+  $('srcline').innerHTML = `Índice de <b>${nLive}</b> corretora${nLive===1?'':'s'}` + (off ? ` · ajustado <b>${off.v>=0?'+':'-'}$${Math.abs(off.v).toFixed(2)}</b> pra bater com a Phantom (${hm(off.at)})` : ' · sem ajuste com a Phantom');
   $('calBtn').textContent = off ? 'Refazer ajuste' : 'Igualar ao app';
   lastChance = st && st.cur!=null ? chanceUp(S, st.beat, st.cur, curSignal) : null;
   $('pUp').textContent = lastChance==null ? '—' : Math.round(lastChance*100)+'%';
@@ -836,11 +863,15 @@ function renderLive(){
   const pv = $('preview');
   if(left <= 60){ const p = previewFor(E); if(p){ pv.hidden = false; pv.innerHTML = `Próxima janela (${hm(E)}): <b class="${p.dir==='UP'?'u':'d'}">${p.dir==='UP'?'▲ Acima':'▼ Abaixo'}</b> <span class="tag ${p.tier}">${TIER_LABEL[p.tier]}</span> <span class="num">${(p.conf*100).toFixed(1)}%</span> · pode mudar até começar`; } }
   else pv.hidden = true;
-  const fs = Object.keys(feeds).filter(f=>feeds[f].last).map(f=>{ const fd = feeds[f], rate = ((fd.hits||[]).filter(x=>x>Date.now()-5000).length/5); return `${fd.name} <b>${pxFmt(fd.last.p)}</b> <span style="color:var(--faint)">${Date.now()-fd.lastMsg>15000?'parado':rate>=1?rate.toFixed(0)+'/s':'lento'}</span>`; });
+  const tot = Object.values(feeds).reduce((a,fd)=>a+fd.hits.filter(x=>x>Date.now()-5000).length,0)/5;
+  $('feedSum').innerHTML = idx ? `Índice <b>${pxFmt(idx.p)}</b> · ${idx.n}/7 corretoras · ${tot.toFixed(0)} atualizações/s · USDT $${usdtRate().toFixed(4)}` : 'Conectando às corretoras…';
+  if($('feedBox').open) $('feedList').innerHTML = Object.keys(feeds).map(f=>{ const fd = feeds[f], rate = fd.hits.filter(x=>x>Date.now()-5000).length/5, dead = !fd.last || Date.now()-fd.lastMsg > staleMs(f);
+    return `<span>${fd.name}${fd.q==='USDT'?' <i>(USDT→$)</i>':''} <b>${fd.last?pxFmt(fd.last.p):'—'}</b> <em>${!fd.last?'sem conexão':dead?'parado':rate>=1?rate.toFixed(0)+'/s':'lento'}</em></span>`; }).join('');
+  const fs = [];
   $('feeds').innerHTML = fs.join('') ? fs.map(x=>`<span>${x}</span>`).join('') : '';
   const lf = liveFeeds();
   $('dot').className = 'dot ' + (lf.length ? 'ok' : 'err');
-  $('statusTxt').textContent = lf.length ? `ao vivo · ${lf.length} fonte${lf.length>1?'s':''}` : 'sem conexão';
+  $('statusTxt').textContent = lf.length ? `ao vivo · ${lf.length} corretora${lf.length>1?'s':''}` : 'sem conexão';
   renderTicket();
 }
 function renderModel(){
@@ -926,19 +957,19 @@ window.addEventListener('resize', ()=>drawSpark());
   const a = store.get('previsor_amt', null); if(a) $('amount').value = a;
   $('initBal').value = wallet.initial;
   renderWallet();
-  openCoinbase(); openBinance();
+  openFeeds();
   pullCandles(1500);
   setInterval(()=>{
     for(const f of Object.keys(feeds)){
       const fd = feeds[f];
-      if(Date.now()-fd.lastMsg > 5000) pollTicker(f);
+      if(REST.includes(f) && Date.now()-fd.lastMsg > 5000) pollTicker(f);
       // conexão aberta mas muda: fecha e tenta outro endereço
-      if(fd.ws && fd.ws.openedAt && Date.now()-fd.ws.openedAt > 10000 && Date.now()-fd.lastMsg > 10000 && fd.ws.close){ try{ fd.ws.close(); }catch(e){} }
+      if(fd.ws && fd.ws.openedAt && Date.now()-fd.ws.openedAt > 15000 && Date.now()-fd.lastMsg > staleMs(f)*2 && fd.ws.close){ try{ fd.ws.close(); }catch(e){} }
     }
   }, 1000);
   checkVersion(); setInterval(checkVersion, 120000);
   setInterval(()=>{ if(Date.now()-candleWs > 10000 || Date.now()-lastCandleOk > 20000) pullCandles(10); resolveModelLog(); resolveBets(); }, 2500);
-  setInterval(sample, 250);
+  setInterval(sample, 200);
   setInterval(renderLive, 250);
   setInterval(()=>{ if(!document.querySelector('[data-panel="modelo"]').hidden) renderModel(); }, 5000);
   requestAnimationFrame(drawChart);
