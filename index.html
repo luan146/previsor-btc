@@ -270,7 +270,7 @@ select.sel{background:var(--surface-2);border:1px solid var(--line);border-radiu
         <div class="panel prose" data-panel="sobre" hidden>
           <p><b>Como usar.</b> No começo de cada janela (:00, :05, :10…) sai o <b>sinal de abertura</b>. Durante a janela, a <b>chance agora</b> muda com o preço. Na Phantom, veja o multiplicador do lado que você quer, digite aqui e a página diz se vale a pena: só vale quando a chance do modelo é maior que 1 ÷ multiplicador.</p>
           <p><b>Teste com dados reais</b> (<span id="btPeriod"></span>): sinal de abertura FORTE acertou <b id="btForte"></b>, fraco <b id="btFraco"></b>, todas <b id="btAll"></b>. Seguindo quem está ganhando: 1 min depois do início 66%, 2 min 74%, 3 min 80%, 4 min 88%. A Phantom também sobe o preço de quem está ganhando.</p>
-          <p><b>Preço.</b> O gráfico usa cada negócio da Coinbase (BTC/USD) e da Binance (BTC/USDT), combinando as duas. A Phantom decide pelo preço da Chainlink, então em janelas muito apertadas o resultado daqui pode sair diferente do app.</p>
+          <p><b>Preço.</b> A Phantom decide pelo oráculo da Chainlink, que junta o preço de várias corretoras. Aqui a fonte principal é o oráculo Pyth, que funciona do mesmo jeito e costuma ficar a poucos dólares dele. Coinbase e Binance sozinhas ficam dezenas de dólares acima ou abaixo (a Binance ainda cota em USDT, não em dólar), então só entram de reserva. Em janelas muito apertadas, o resultado daqui ainda pode sair diferente do app.</p>
           <div class="field"><label for="src">Fonte dos candles do modelo</label>
             <select class="sel" id="src"><option value="auto">Automática</option><option value="binance">Binance</option><option value="coinbase">Coinbase</option><option value="kraken">Kraken</option></select></div>
           <div class="row-actions"><button class="btn" id="wake">Manter tela ligada</button></div>
@@ -309,7 +309,18 @@ async function getJSON(url){
 
 /* ============ preço ao vivo por negócio (Coinbase + Binance) ============ */
 // cada fonte guarda o último negócio e o preço em cada virada de 5 min (fronteira)
-const feeds = { coinbase:{name:'Coinbase', last:null, ws:null, lastMsg:0}, binance:{name:'Binance', last:null, ws:null, lastMsg:0} };
+// Pyth: oráculo que junta dezenas de corretoras, como a Chainlink que a Phantom usa. É a fonte principal.
+const PYTH_ID = 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43';
+const PYTH = 'https://hermes.pyth.network';
+const feeds = { pyth:{name:'Oráculo Pyth', last:null, ws:null, lastMsg:0}, coinbase:{name:'Coinbase', last:null, ws:null, lastMsg:0}, binance:{name:'Binance', last:null, ws:null, lastMsg:0} };
+const pythPx = u => { const q = u.price; return +q.price * Math.pow(10, q.expo); };
+function openPyth(){
+  if(feeds.pyth.ws || typeof EventSource==='undefined') return;
+  let es; try{ es = new EventSource(`${PYTH}/v2/updates/price/stream?ids[]=${PYTH_ID}&parsed=true`); }catch(e){ return; }
+  feeds.pyth.ws = es;
+  es.onmessage = ev=>{ try{ const u = JSON.parse(ev.data).parsed[0]; onTick('pyth', pythPx(u), u.price.publish_time); }catch(e){} };
+  es.onerror = ()=>{ if(es.readyState===2){ feeds.pyth.ws = null; setTimeout(openPyth, 3000); } };
+}
 const boundary = {}; // boundary[t][fonte] = preço no instante t (múltiplo de 300)
 function setBoundary(t, f, p){ (boundary[t] ||= {})[f] ??= p; }
 function onTick(f, p, t){
@@ -352,7 +363,8 @@ function openBinance(){
 // se o WebSocket não entregar nada, consulta o preço a cada segundo
 async function pollTicker(f){
   try{
-    if(f==='coinbase'){ const d = await getJSON('https://api.exchange.coinbase.com/products/BTC-USD/ticker'); onTick('coinbase', +d.price, d.time ? Date.parse(d.time)/1000 : null); }
+    if(f==='pyth'){ const d = await getJSON(`${PYTH}/v2/updates/price/latest?ids[]=${PYTH_ID}&parsed=true`); const u = d.parsed[0]; onTick('pyth', pythPx(u), u.price.publish_time); }
+    else if(f==='coinbase'){ const d = await getJSON('https://api.exchange.coinbase.com/products/BTC-USD/ticker'); onTick('coinbase', +d.price, d.time ? Date.parse(d.time)/1000 : null); }
     else { let d; try{ d = await getJSON('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT'); }catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT'); } onTick('binance', +d.price, null); }
   }catch(e){}
 }
@@ -361,7 +373,10 @@ const bfPending = {};
 async function fetchBoundary(f, t){
   const key = f+t; if(bfPending[key] && Date.now()-bfPending[key] < 15000) return; bfPending[key] = Date.now();
   try{
-    if(f==='coinbase'){
+    if(f==='pyth'){
+      const d = await getJSON(`${PYTH}/v2/updates/price/${t}?ids[]=${PYTH_ID}&parsed=true`);
+      const u = d.parsed && d.parsed[0]; if(u && Math.abs(u.price.publish_time - t) <= 2) setBoundary(t, f, pythPx(u));
+    } else if(f==='coinbase'){
       const d = await getJSON(`https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=60&start=${new Date(t*1000).toISOString()}&end=${new Date((t+60)*1000).toISOString()}`);
       const k = d.find(x=>x[0]===t); if(k) setBoundary(t, f, +k[3]);
     } else {
@@ -373,25 +388,43 @@ async function fetchBoundary(f, t){
 }
 const liveFeeds = () => Object.keys(feeds).filter(f => feeds[f].last && Date.now()-feeds[f].lastMsg < 15000);
 
-// preço a bater = média das fontes que têm o preço de início; variação = média das variações de cada fonte
+// Com o Pyth: preço a bater e preço atual vêm só do oráculo (mesma régua da Phantom).
+// Sem o Pyth: média da Coinbase e Binance, cada uma comparada com o próprio preço de início.
+const OTHERS = ['coinbase','binance'];
 function windowState(S){
-  const b = boundary[S] || {};
-  const withStart = Object.keys(b);
-  if(!withStart.length) return null;
-  const beat = withStart.reduce((a,f)=>a+b[f],0)/withStart.length;
-  const lf = liveFeeds().filter(f => b[f]!=null);
-  if(!lf.length) return {beat, cur:null};
-  const delta = lf.reduce((a,f)=>a + (feeds[f].last.p - b[f]),0)/lf.length;
-  return {beat, cur: beat + delta};
+  const b = boundary[S] || {}, live = liveFeeds();
+  if(b.pyth!=null){
+    const beat = b.pyth;
+    if(live.includes('pyth')) return {beat, cur: feeds.pyth.last.p, src:'pyth'};
+    const lf = live.filter(f=>OTHERS.includes(f) && b[f]!=null);
+    if(!lf.length) return {beat, cur:null, src:'pyth'};
+    return {beat, cur: beat + lf.reduce((a,f)=>a+(feeds[f].last.p-b[f]),0)/lf.length, src:'mix'};
+  }
+  const ws = OTHERS.filter(f=>b[f]!=null); if(!ws.length) return null;
+  const beat = ws.reduce((a,f)=>a+b[f],0)/ws.length;
+  const lf = live.filter(f=>ws.includes(f));
+  if(!lf.length) return {beat, cur:null, src:'corretoras'};
+  return {beat, cur: beat + lf.reduce((a,f)=>a+(feeds[f].last.p-b[f]),0)/lf.length, src:'corretoras'};
 }
-// resultado de uma janela: precisa do preço na virada de início e de fim na mesma fonte
+// resultado de uma janela: preço na virada de início e de fim na mesma fonte (Pyth primeiro)
 function windowResult(S){
   const a = boundary[S] || {}, z = boundary[S+WIN] || {};
-  const both = Object.keys(a).filter(f => z[f]!=null);
+  if(a.pyth!=null && z.pyth!=null) return {beat:a.pyth, end:z.pyth, delta:z.pyth-a.pyth, src:'pyth'};
+  const both = OTHERS.filter(f => a[f]!=null && z[f]!=null);
   if(!both.length) return null;
   const beat = both.reduce((s,f)=>s+a[f],0)/both.length;
   const delta = both.reduce((s,f)=>s+(z[f]-a[f]),0)/both.length;
-  return {beat, end: beat+delta, delta};
+  return {beat, end: beat+delta, delta, src:'corretoras'};
+}
+// começo da janela quando a página abre no meio: candles de 1 s da Binance, alinhados ao preço a bater
+const backfill = {};
+async function loadBackfill(S){
+  if(backfill[S]) return; backfill[S] = {pts:[], loading:true};
+  try{
+    const q = `?symbol=BTCUSDT&interval=1s&startTime=${S*1000}&limit=1000`;
+    let d; try{ d = await getJSON('https://api.binance.com/api/v3/klines'+q); }catch(e){ d = await getJSON('https://data-api.binance.vision/api/v3/klines'+q); }
+    if(d.length) backfill[S] = {open:+d[0][1], pts:d.map(k=>({t:k[0]/1000+1, c:+k[4]})), loading:false};
+  }catch(e){ backfill[S].loading = false; }
 }
 
 /* ============ candles de 1 min (modelo + gráficos 1H / 1D) ============ */
@@ -648,7 +681,12 @@ function seriesFor(r){
     const st = windowState(S);
     let pts = tickSeries.filter(x=>x.t>=S);
     const firstTick = pts.length ? pts[0].t : t;
-    if(firstTick - S > 20){ pts = candleSeries(S).filter(x=>x.t < firstTick).concat(pts); }
+    if(firstTick - S > 10){
+      const bf = backfill[S];
+      if(!bf) loadBackfill(S);
+      if(bf && bf.pts.length && st){ const off = st.beat - bf.open; pts = bf.pts.filter(x=>x.t < firstTick - 1).map(x=>({t:x.t, p:x.c+off})).concat(pts); }
+      else if(!bf || !bf.loading) pts = candleSeries(S).filter(x=>x.t < firstTick).concat(pts);
+    }
     if(st) pts = [{t:S, p:st.beat}].concat(pts.filter(x=>x.t>S));
     return {pts, x0:S, x1:S+WIN, beat: st ? st.beat : null};
   }
@@ -834,7 +872,7 @@ window.addEventListener('resize', ()=>drawSpark());
   const a = store.get('previsor_amt', null); if(a) $('amount').value = a;
   $('initBal').value = wallet.initial;
   renderWallet();
-  openCoinbase(); openBinance();
+  openPyth(); openCoinbase(); openBinance();
   pullCandles(1500);
   setInterval(()=>{ for(const f of Object.keys(feeds)) if(Date.now()-feeds[f].lastMsg > 5000) pollTicker(f); }, 1000);
   setInterval(()=>{ if(Date.now()-candleWs > 10000 || Date.now()-lastCandleOk > 20000) pullCandles(10); resolveModelLog(); resolveBets(); }, 2500);
